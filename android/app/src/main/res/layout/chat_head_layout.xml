@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <!-- Chat Head Container -->
+    <RelativeLayout
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:padding="8dp">
+
+        <!-- Bee Avatar Circle -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_centerInParent="true"
+            app:cardElevation="8dp"
+            app:cardCornerRadius="32dp"
+            app:cardBackgroundColor="#ffbf00">
+
+            <ImageView
+                android:id="@+id/chat_head_avatar"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="Bee Avatar" />
+
+        </androidx.cardview.widget.CardView>
+
+        <!-- Unread Badge -->
+        <TextView
+            android:id="@+id/chat_head_badge"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:background="@drawable/badge_background"
+            android:gravity="center"
+            android:text="1"
+            android:textColor="#FFFFFF"
+            android:textSize="10sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            android:translationZ="10dp" />
+
+    </RelativeLayout>
+
+</FrameLayout>

@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         registerPlugin(BarcodeScannerPlugin.class);
+        registerPlugin(ChatHeadPlugin.class);
     }
 
     @Override

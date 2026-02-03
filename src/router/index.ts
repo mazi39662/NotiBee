@@ -65,6 +65,10 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@/views/ProfilePage.vue')
       },
       {
+        path: 'chat-head-test',
+        component: () => import('@/views/ChatHeadTestPage.vue')
+      },
+      {
         path: 'admin',
         component: () => import('@/views/AdminPage.vue'),
         meta: { requiresAdmin: true }

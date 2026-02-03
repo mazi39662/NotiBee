@@ -47,6 +47,18 @@
             </div>
           </div>
         </div>
+        
+        <!-- Feed Filter Segment -->
+        <div class="segment-wrapper animate-in">
+          <ion-segment v-model="selectedSegment" mode="ios" class="custom-segment">
+            <ion-segment-button value="everyone">
+              <ion-label>Global Hive</ion-label>
+            </ion-segment-button>
+            <ion-segment-button value="friends">
+              <ion-label>My Colony</ion-label>
+            </ion-segment-button>
+          </ion-segment>
+        </div>
 
 
         <!-- Nectar Feed Section -->
@@ -58,9 +70,7 @@
           </div>
           
           <div v-else class="cards-container">
-            <div 
-              v-for="story in integratedStories" 
-              :key="story.id" 
+            <div v-for="story in filteredStories" :key="story.id" 
               class="nectar-card animate-pop"
               :class="{ 'ad-card': 'isAd' in story }"
               @click="handleItemClick(story)"
@@ -68,7 +78,15 @@
               <!-- Card Header -->
               <div class="card-header">
                 <div class="card-user" @click.stop="goToProfile(story.beeId)">
-                  <div class="card-avatar">{{ 'isAd' in story ? '📣' : '🐝' }}</div>
+                  <div class="card-avatar">
+                    <template v-if="'isAd' in story">📣</template>
+                    <BeeComposite 
+                      v-else
+                      :customization="getBeeCustomization(story.beeId)" 
+                      :scale="0.18" 
+                      :animated="false"
+                    />
+                  </div>
                   <div class="card-user-info">
                     <h4>{{ 'isAd' in story ? story.beeId : (story.beeId === userBeeId ? 'You' : story.beeId) }}</h4>
                     <span class="card-time" v-if="!('isAd' in story)">{{ getRelativeTime(story.createdAt) }}</span>
@@ -217,7 +235,13 @@
           <!-- Story Header -->
           <div class="story-header">
             <div class="story-user" @click="goToProfile(currentStory.beeId)">
-              <div class="user-avatar">🐝</div>
+              <div class="user-avatar">
+                <BeeComposite 
+                  :customization="getBeeCustomization(currentStory.beeId)" 
+                  :scale="0.22" 
+                  :animated="true"
+                />
+              </div>
               <div class="user-details">
                 <h4>{{ currentStory.beeId }}</h4>
                 <p>{{ getRelativeTime(currentStory.createdAt) }}</p>
@@ -503,7 +527,13 @@
               <p>No nectar comments yet. Be the first!</p>
             </div>
             <div v-for="comment in currentStory?.comments" :key="comment.id" class="comment-item">
-              <div class="comment-avatar">🐝</div>
+              <div class="comment-avatar">
+                <BeeComposite 
+                  :customization="getBeeCustomization(comment.beeId)" 
+                  :scale="0.18" 
+                  :animated="false"
+                />
+              </div>
               <div class="comment-content">
                 <div class="comment-header">
                   <span class="comment-bee-id" @click="goToProfile(comment.beeId)">{{ comment.beeId }}</span>
@@ -606,7 +636,13 @@
                 class="viewer-item"
                 :class="{ 'is-blurred': !isActuallyFriend(viewerId) && !revealedViewers.has(viewerId) }"
               >
-                <div class="viewer-avatar">🐝</div>
+                <div class="viewer-avatar">
+                  <BeeComposite 
+                    :customization="getBeeCustomization(viewerId)" 
+                    :scale="0.18" 
+                    :animated="false"
+                  />
+                </div>
                 <div class="viewer-info">
                   <template v-if="isActuallyFriend(viewerId) || revealedViewers.has(viewerId)">
                     <span class="viewer-bee-id" @click="goToProfile(viewerId)">{{ viewerId }}</span>
@@ -662,6 +698,7 @@ import {
   IonButtons, IonButton, IonIcon, IonModal, IonTextarea,
   IonSpinner, IonActionSheet, IonRefresher, IonRefresherContent,
   IonInfiniteScroll, IonInfiniteScrollContent, IonFooter,
+  IonSegment, IonSegmentButton, IonLabel,
   alertController, toastController
 } from '@ionic/vue';
 import {
@@ -679,6 +716,7 @@ import { useAdService } from '@/services/AdService';
 import { useHoneyService } from '@/services/HoneyService';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { useUserService } from '@/services/UserService';
+import BeeComposite from '@/components/BeeComposite.vue';
 import { useRouter } from 'vue-router';
 import { Keyboard } from '@capacitor/keyboard';
 import { Capacitor } from '@capacitor/core';
@@ -696,9 +734,55 @@ const {
 } = useHoneyService();
 const honeyJarIcon = '🏺';
 
-const { userBeeId, getFriends } = useUserService();
+const { userBeeId, getFriends, getUserProfile } = useUserService();
 const friends = getFriends();
 const revealedViewers = ref(new Set<string>());
+const selectedSegment = ref('everyone');
+
+const cachedProfiles = ref<Record<string, any>>({});
+
+const filteredStories = computed(() => {
+  if (selectedSegment.value === 'everyone') {
+    return integratedStories.value;
+  }
+  
+  // Filter for friends and self
+  return integratedStories.value.filter(item => {
+    // Hide generic ads in friends-only view
+    if ('isAd' in item) return false;
+    
+    return friends.value.includes(item.beeId) || item.beeId === userBeeId.value;
+  });
+});
+
+const getBeeCustomization = (beeId: string) => {
+  if (beeId === 'You' && userBeeId.value) beeId = userBeeId.value;
+  if (!beeId) return null;
+  
+  if (cachedProfiles.value[beeId]) {
+    return cachedProfiles.value[beeId].customization;
+  }
+  
+  // Lazy fetch
+  fetchProfile(beeId);
+  return null;
+};
+
+const fetchProfile = async (beeId: string) => {
+  if (beeId === 'You' || !beeId || cachedProfiles.value[beeId]) return;
+  
+  // Mark as placeholder/fetching
+  cachedProfiles.value[beeId] = { fetching: true };
+  
+  try {
+    const profile = await getUserProfile(beeId);
+    if (profile) {
+      cachedProfiles.value[beeId] = profile;
+    }
+  } catch (e) {
+    console.error(`Failed to fetch profile for ${beeId}`, e);
+  }
+};
 
 const isActuallyFriend = (id: string) => {
   return friends.value.includes(id) || id === userBeeId.value || isRevealed(id);
@@ -993,6 +1077,10 @@ onMounted(async () => {
   
   // Real Ads Initialization
   initializeAdMob();
+  if (userBeeId.value) {
+    fetchProfile(userBeeId.value);
+  }
+  
   await fetchAds();
   
   // Real-time listener
@@ -1029,6 +1117,17 @@ onMounted(async () => {
     });
   }
 });
+
+// Pre-fetch profiles for stories
+watch(integratedStories, (newStories) => {
+  newStories.forEach(item => {
+    if (!('isAd' in item)) {
+      fetchProfile(item.beeId);
+      // Also fetch commenters if they exist
+      item.comments?.forEach(c => fetchProfile(c.beeId));
+    }
+  });
+}, { immediate: true });
 
 onUnmounted(() => {
   if (cleanupInterval) clearInterval(cleanupInterval);
@@ -1607,6 +1706,33 @@ const getRelativeTime = (timestamp: number): string => {
   }
 }
 
+/* Feed Segment Styles */
+.segment-wrapper {
+  margin-bottom: 20px;
+  padding: 4px;
+}
+
+.custom-segment {
+  --background: rgba(255, 255, 255, 0.05);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  padding: 2px;
+}
+
+ion-segment-button {
+  --indicator-color: var(--ion-color-primary);
+  --color: #888;
+  --color-checked: #000;
+  font-weight: 700;
+  font-size: 13px;
+  min-height: 38px;
+  text-transform: none;
+  letter-spacing: 0.5px;
+}
+
 h3 {
   font-size: 14px;
   text-transform: uppercase;
@@ -1903,6 +2029,8 @@ h3 {
   align-items: center;
   justify-content: center;
   font-size: 20px;
+  overflow: hidden;
+  position: relative;
 }
 
 .user-details h4 {
@@ -2329,7 +2457,25 @@ ion-toolbar {
   justify-content: center;
   font-size: 20px;
   border: 1px solid rgba(255, 191, 0, 0.3);
+  overflow: hidden;
+  position: relative;
 }
+
+.card-avatar :deep(.bee-composite-stage),
+.user-avatar :deep(.bee-composite-stage),
+.comment-avatar :deep(.bee-composite-stage),
+.viewer-avatar :deep(.bee-composite-stage) {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) scale(var(--bee-scale, 1)) !important;
+  margin: 0 !important;
+}
+
+.card-avatar :deep(.bee-composite-stage) { --bee-scale: 0.18; }
+.user-avatar :deep(.bee-composite-stage) { --bee-scale: 0.22; }
+.comment-avatar :deep(.bee-composite-stage) { --bee-scale: 0.18; }
+.viewer-avatar :deep(.bee-composite-stage) { --bee-scale: 0.18; }
 
 .card-user-info h4 {
   margin: 0;
@@ -2650,6 +2796,8 @@ ion-toolbar {
   justify-content: center;
   font-size: 20px;
   flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
 }
 
 .comment-content {
@@ -2870,6 +3018,8 @@ ion-toolbar {
   align-items: center;
   justify-content: center;
   font-size: 22px;
+  overflow: hidden;
+  position: relative;
 }
 
 .view-more-container {
