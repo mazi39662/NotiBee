@@ -74,8 +74,6 @@
                     <div class="bee-dot detected">
                         <div class="dot-inner"></div>
                         <span class="bee-emoji">🐝</span>
-                        <!-- <div class="bee-id-tag">{{ bee.beeId }}</div> -->
-                        <div class="bee-dist-tag">{{ formatDistance(bee.distance) }}</div>
                     </div>
                 </div>
             </div>
@@ -95,7 +93,7 @@
             <div class="stat-divider"></div>
             <div class="stat-item">
                 <span class="label">RANGE</span>
-                <span class="value">5 KM</span>
+                <span class="value">10 KM</span>
             </div>
         </div>
 
@@ -116,19 +114,26 @@
        <ion-modal 
         :is-open="isProfileOpen" 
         @didDismiss="isProfileOpen = false"
-        :initial-breakpoint="0.45"
-        :breakpoints="[0, 0.45, 0.75]"
+        :initial-breakpoint="0.5"
+        :breakpoints="[0, 0.5, 0.8]"
         handle="true"
         class="bee-profile-modal"
       >
-        <div class="modal-wrapper" v-if="selectedBee">
+        <div class="modal-wrapper glass-modal" v-if="selectedBee">
+            <ion-button fill="clear" color="medium" class="close-modal-btn" @click="isProfileOpen = false">
+                <ion-icon :icon="close"></ion-icon>
+            </ion-button>
             <div class="modal-header">
-                <div class="large-avatar-hex" @click="goToProfile(selectedBee?.beeId)" style="cursor: pointer;">
-                    <div class="hexagon hex-glow">🐝</div>
+                <div class="large-avatar-stage" @click="goToProfile(selectedBee?.beeId)" style="cursor: pointer;">
+                    <BeeComposite 
+                        :customization="selectedBee.customization" 
+                        :animated="true" 
+                        :scale="1.2"
+                    />
                 </div>
                 <h2 @click="goToProfile(selectedBee?.beeId)" style="cursor: pointer;">{{ selectedBee.beeId }}</h2>
                 <div @click="goToProfile(selectedBee?.beeId)" class="view-profile-link">VIEW PROFILE</div>
-                <p>{{ formatDistance(selectedBee.distance) }} away from you</p>
+                <p class="distance-text">{{ formatDistance(selectedBee.distance) }} away from you</p>
             </div>
             <div class="modal-body">
                 <ion-button v-if="isFriend" expand="block" shape="round" fill="outline" color="primary" disabled>
@@ -152,7 +157,8 @@ import {
   IonButtons, IonBackButton, IonIcon, IonButton, IonModal,
   alertController, toastController, IonSpinner, IonRefresher, IonRefresherContent
 } from '@ionic/vue';
-import { eye, eyeOff, flash, alertCircleOutline, chevronDown, personAddOutline, checkmarkCircleOutline } from 'ionicons/icons';
+import BeeComposite from '@/components/BeeComposite.vue';
+import { eye, eyeOff, flash, alertCircleOutline, chevronDown, personAddOutline, checkmarkCircleOutline, close } from 'ionicons/icons';
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { useUserService } from '@/services/UserService';
 import { useBuzzService } from '@/services/BuzzService';
@@ -176,23 +182,47 @@ const isFriend = computed(() => {
 const userLocation = ref<{ lat: number, lng: number } | null>(null);
 const visibleBees = getVisibleBees();
 const isProfileOpen = ref(false);
-const selectedBee = ref<any>(null);
-const mockBees = ref<any[]>([]);
+const selectedBeeId = ref<string | null>(null);
+const selectedBee = computed(() => {
+    if (!selectedBeeId.value) return null;
+    return nearbyBees.value.find(b => b.beeId === selectedBeeId.value);
+});
 const isRequesting = ref(false);
 
 // Map to store random positions so they stay stable while the user is on the radar
 const positionCache = new Map<string, { x: number, y: number }>();
+const MIN_DISTANCE_PX = 38; // Minimum pixels between bees to prevent overlap
 
 const getPersistentRandomPosition = (beeId: string) => {
     if (positionCache.has(beeId)) return positionCache.get(beeId);
     
-    // Generate random angle and radius within the disk (160px max)
-    // Avoid center (30px min)
-    const angle = Math.random() * Math.PI * 2;
-    const radius = 40 + (Math.random() * 110); // Between 40px and 150px
-    
-    const x = Math.cos(angle) * radius;
-    const y = Math.sin(angle) * radius;
+    let x = 0;
+    let y = 0;
+    let attempts = 0;
+    const maxAttempts = 150;
+
+    // Outer disk radius is 160px. We stay within 45-150 range for visual spread.
+    while (attempts < maxAttempts) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 45 + (Math.random() * 105); 
+        
+        x = Math.cos(angle) * radius;
+        y = Math.sin(angle) * radius;
+        
+        let tooClose = false;
+        for (const otherPos of positionCache.values()) {
+            const dx = x - otherPos.x;
+            const dy = y - otherPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < MIN_DISTANCE_PX) {
+                tooClose = true;
+                break;
+            }
+        }
+        
+        if (!tooClose) break;
+        attempts++;
+    }
     
     const pos = { x, y };
     positionCache.set(beeId, pos);
@@ -200,14 +230,13 @@ const getPersistentRandomPosition = (beeId: string) => {
 };
 
 // Radar Settings
-const MAX_RANGE_KM = 5;
+const MAX_RANGE_KM = 10;
 
 const nearbyBees = computed(() => {
     if (!userLocation.value) return [];
-    
     const friendList = friends.value || [];
     
-    const realBees = visibleBees.value
+    return visibleBees.value
         .filter(bee => {
             const isMe = bee.beeId === userBeeId.value;
             const isFriend = friendList.includes(bee.beeId);
@@ -230,19 +259,15 @@ const nearbyBees = computed(() => {
 
             return { ...bee, distance: dist, bearing: bearing };
         })
-        .filter(bee => bee.distance <= MAX_RANGE_KM);
-
-    // Also filter mock bees against friends list just in case
-    const filteredMockBees = mockBees.value.filter(bee => !friendList.includes(bee.beeId));
-
-    return [...realBees, ...filteredMockBees].sort((a, b) => a.distance - b.distance);
+        .filter(bee => bee.distance <= MAX_RANGE_KM)
+        .sort((a, b) => a.distance - b.distance);
 });
 
-// Helper to get a stable random position for visual variety
+// Helper to get coordinates on the radar disk
 const getJitteredPosition = (bee: any) => {
-    const pos = getPersistentRandomPosition(bee.beeId);
+    const pos = getPersistentRandomPosition(bee.beeId) || { x: 0, y: 0 };
     return {
-        transform: `translate(calc(160px + ${pos?.x}px), calc(160px + ${pos?.y}px))`
+        transform: `translate(calc(160px + ${pos.x}px), calc(160px + ${pos.y}px))`
     };
 };
 
@@ -269,8 +294,10 @@ const calculateBearing = (lat1: number, lon1: number, lat2: number, lon2: number
 // getBeePosition removed in favor of getJitteredPosition
 
 const formatDistance = (dist: number) => {
+    if (dist < 0.001) return 'Right here! 📍';
     if (dist < 1) return `${Math.round(dist * 1000)}m`;
-    return `${dist.toFixed(1)}km`;
+    // Show 2 decimal places for accuracy under 10km
+    return `${dist.toFixed(2)}km`;
 };
 
 const toggleVisibility = async () => {
@@ -338,7 +365,7 @@ const triggerVibration = async (bee: any) => {
 };
 
 const openBeeProfile = (bee: any) => {
-    selectedBee.value = bee;
+    selectedBeeId.value = bee.beeId;
     isProfileOpen.value = true;
     Haptics.impact({ style: ImpactStyle.Light });
 };
@@ -353,6 +380,7 @@ const goToProfile = (beeId: string | undefined) => {
 
 const handleRefresh = async (event: any) => {
     Haptics.impact({ style: ImpactStyle.Light });
+    positionCache.clear();
     await getCurrentPosition();
     setTimeout(() => {
         event.target.complete();
@@ -449,6 +477,7 @@ const getCurrentPosition = async () => {
 const startTracking = async () => {
     try {
         signalError.value = null;
+        positionCache.clear();
         const permissions = await Geolocation.checkPermissions();
         
         if (permissions.location !== 'granted') {
@@ -474,7 +503,8 @@ const startTracking = async () => {
         
         watchId = await Geolocation.watchPosition({
             enableHighAccuracy: true,
-            timeout: 30000 // Increased to 30s
+            timeout: 30000,
+            maximumAge: 0
         }, (position, err) => {
             if (position) {
                 signalError.value = null;
@@ -494,18 +524,6 @@ const startTracking = async () => {
                 }
             }
         });
-
-        // Add a mock bee after 3 seconds if none found, for testing
-        setTimeout(() => {
-            if (nearbyBees.value.length === 0) {
-                mockBees.value = [{
-                    beeId: 'betabee',
-                    distance: 0.8, // 800m
-                    bearing: Math.random() * 360,
-                    isMock: true
-                }];
-            }
-        }, 3000);
     } catch (e) {
         console.error('Start tracking error:', e);
         signalError.value = 'Failed to initialize radar tracking.';
@@ -677,6 +695,7 @@ onUnmounted(() => {
     width: 0;
     height: 0;
     z-index: 15; /* Highest layer inside disk */
+    transition: transform 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); /* Bouncy move */
 }
 
 .bee-dot {
@@ -695,12 +714,12 @@ onUnmounted(() => {
     filter: drop-shadow(0 0 5px var(--ion-color-primary));
 }
 
-.bee-dot.detected { animation: ping 4s linear infinite; }
+.bee-dot.detected { animation: ping 3s ease-in-out infinite; }
 
 @keyframes ping {
-    0%, 15% { opacity: 1; transform: translate(-50%, -50%) scale(1.3); }
-    50% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
-    100% { opacity: 0; }
+    0% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    100% { opacity: 0.7; transform: translate(-50%, -50%) scale(1); }
 }
 
 .dot-inner {
@@ -808,12 +827,14 @@ onUnmounted(() => {
 
 .bee-profile-modal {
     --border-radius: 32px 32px 0 0;
-    --background: var(--ion-background-color);
+    --background: transparent; /* Mandatory: makes the modal container see-through */
+    backdrop-filter: none !important;
+    --backdrop-filter: none !important;
 }
 
+/* Modal content glassmorphism */
 .modal-wrapper {
     padding: 24px 20px 40px;
-    background: var(--ion-background-color);
     text-align: center;
     color: white;
     display: flex;
@@ -821,16 +842,42 @@ onUnmounted(() => {
     align-items: center;
     justify-content: flex-start;
     min-height: 100%;
+    
+    /* Glass Effect */
+    background: rgba(18, 18, 18, 0.7) !important;
+    backdrop-filter: blur(25px) saturate(200%);
+    -webkit-backdrop-filter: blur(25px) saturate(200%);
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.4);
+    border-top-left-radius: 32px;
+    border-top-right-radius: 32px;
 }
 
-.large-avatar-hex {
-  width: 104px;
-  height: 90px;
-  margin: 0 auto 15px;
-  position: relative;
+.close-modal-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    z-index: 10;
+    --padding-start: 10px;
+    --padding-end: 10px;
+}
+
+.large-avatar-stage {
+  width: 100%;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: -10px;
+  position: relative;
+  overflow: visible;
+}
+
+.distance-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.7);
+    margin-top: -5px;
 }
 
 .view-profile-link {
@@ -838,7 +885,7 @@ onUnmounted(() => {
     font-weight: 800;
     color: var(--ion-color-primary);
     letter-spacing: 1.5px;
-    margin: 0 auto 15px;
+    margin: 10px auto 15px;
     cursor: pointer;
     display: inline-block;
     padding: 2px 10px;
@@ -870,7 +917,6 @@ onUnmounted(() => {
     font-weight: 800;
     --border-radius: 14px;
     height: 52px;
-    box-shadow: 0 4px 15px rgba(255, 191, 0, 0.3);
     margin-top: 10px;
 }
 
