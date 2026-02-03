@@ -137,73 +137,77 @@
             </div>
 
             <!-- Buzz History list -->
-            <div 
-              class="chat-history-container" 
+            <ion-content 
+              class="chat-history-scroll" 
               ref="chatScrollRef"
+              :scroll-y="true"
+              data-ion-no-swipe="true"
               @touchstart="handleChatTouchStart"
               @touchmove="handleChatTouchMove"
             >
-              <div class="chat-spacer"></div>
-              <div v-if="currentRoomBuzzes.length === 0" class="empty-chat-v2">
-                <div class="empty-icon-v2">📢</div>
-                <p>Quiet hive... Start the swarm!</p>
-              </div>
+              <div class="chat-history-container">
+                <div class="chat-spacer"></div>
+                <div v-if="currentRoomBuzzes.length === 0" class="empty-chat-v2">
+                  <div class="empty-icon-v2">📢</div>
+                  <p>Quiet hive... Start the swarm!</p>
+                </div>
 
-              <div 
-                v-for="(buzz, idx) in sortedBuzzes" 
-                :key="buzz.id" 
-                :class="[
-                  'buzz-bubble-v2', 
-                  { 
-                    'own-buzz': buzz.sender === userBeeId,
-                    'is-first': idx === 0 || sortedBuzzes[idx-1].sender !== buzz.sender,
-                    'is-last': idx === sortedBuzzes.length - 1 || sortedBuzzes[idx+1].sender !== buzz.sender,
-                    'has-next': idx < sortedBuzzes.length - 1 && sortedBuzzes[idx+1].sender === buzz.sender
-                  }
-                ]"
-                @contextmenu.prevent="showReactionPicker(buzz, $event)"
-              >
-                <div class="buzz-sender-v2" v-if="buzz.sender !== userBeeId && (idx === 0 || sortedBuzzes[idx-1].sender !== buzz.sender)">
-                  {{ buzz.sender }}
-                </div>
-                <div class="buzz-content-v2" :class="{ 'has-media': buzz.image || buzz.audioUrl }" @click="handleBuzzClick(buzz, $event)">
-                  <img v-if="buzz.image" :src="buzz.image" class="buzz-img-v2" @click.stop="viewFullImage(buzz.image)" @load="scrollToBottom(0)" />
-                  <AudioBubble 
-                    v-if="buzz.audioUrl" 
-                    :src="buzz.audioUrl" 
-                    :duration="buzz.duration || 0" 
-                    :msgId="buzz.id" 
-                    :is-own="buzz.sender === userBeeId" 
-                    :customization="getMemberCustomization(buzz.sender)"
-                  />
-                  <p v-else-if="buzz.message">{{ buzz.message }}</p>
-                  
-                  <div class="buzz-meta-v2">
-                    <span class="buzz-time-v2">{{ formatTime(buzz.timestamp) }}</span>
-                    <div class="read-receipt-container" v-if="buzz.sender === userBeeId">
-                      <ion-spinner name="crescent" v-if="buzz.status === 'sending'" class="receipt-spinner"></ion-spinner>
-                      <ion-icon :icon="checkmarkDoneOutline" v-else-if="buzz.status === 'sent' || !buzz.status" class="read-receipt"></ion-icon>
-                      <ion-icon :icon="alertCircleOutline" v-else-if="buzz.status === 'error'" class="error-receipt"></ion-icon>
+                <div 
+                  v-for="(buzz, idx) in sortedBuzzes" 
+                  :key="buzz.id" 
+                  :class="[
+                    'buzz-bubble-v2', 
+                    { 
+                      'own-buzz': buzz.sender === userBeeId,
+                      'is-first': idx === 0 || sortedBuzzes[idx-1].sender !== buzz.sender,
+                      'is-last': idx === sortedBuzzes.length - 1 || sortedBuzzes[idx+1].sender !== buzz.sender,
+                      'has-next': idx < sortedBuzzes.length - 1 && sortedBuzzes[idx+1].sender === buzz.sender
+                    }
+                  ]"
+                  @contextmenu.prevent="handleMessageLongPress(buzz, $event)"
+                >
+                  <div class="buzz-sender-v2" v-if="buzz.sender !== userBeeId && (idx === 0 || sortedBuzzes[idx-1].sender !== buzz.sender)">
+                    {{ buzz.sender }}
+                  </div>
+                  <div class="buzz-content-v2" :class="{ 'has-media': buzz.image || buzz.audioUrl }" @click="handleBuzzClick(buzz, $event)">
+                    <img v-if="buzz.image" :src="buzz.image" class="buzz-img-v2" @click.stop="viewFullImage(buzz.image)" @load="scrollToBottom(0)" />
+                    <AudioBubble 
+                      v-if="buzz.audioUrl" 
+                      :src="buzz.audioUrl" 
+                      :duration="buzz.duration || 0" 
+                      :msgId="buzz.id" 
+                      :is-own="buzz.sender === userBeeId" 
+                      :customization="getMemberCustomization(buzz.sender)"
+                    />
+                    <p v-else-if="buzz.message">{{ buzz.message }}</p>
+                    
+                    <div class="buzz-meta-v2">
+                      <span class="buzz-time-v2">{{ formatTime(buzz.timestamp) }}</span>
+                      <div class="read-receipt-container" v-if="buzz.sender === userBeeId">
+                        <ion-spinner name="crescent" v-if="buzz.status === 'sending'" class="receipt-spinner"></ion-spinner>
+                        <ion-icon :icon="checkmarkDoneOutline" v-else-if="buzz.status === 'sent' || !buzz.status" class="read-receipt"></ion-icon>
+                        <ion-icon :icon="alertCircleOutline" v-else-if="buzz.status === 'error'" class="error-receipt"></ion-icon>
+                      </div>
+                    </div>
+                    
+                    <!-- Reactions Display -->
+                    <div v-if="buzz.reactions && Object.keys(buzz.reactions).length > 0" class="reactions-container">
+                      <div 
+                        v-for="(users, emoji) in buzz.reactions" 
+                        :key="emoji" 
+                        v-show="users.length > 0"
+                        :class="['reaction-pill', { 'reacted': users.includes(userBeeId || '') }]"
+                        @click.stop="reactToBuzz(buzz, emoji)"
+                      >
+                        <span class="emoji">{{ emoji }}</span>
+                        <span class="count">{{ users.length }}</span>
+                      </div>
                     </div>
                   </div>
-                  
-                  <!-- Reactions Display -->
-                  <div v-if="buzz.reactions && Object.keys(buzz.reactions).length > 0" class="reactions-container">
-                    <div 
-                      v-for="(users, emoji) in buzz.reactions" 
-                      :key="emoji" 
-                      v-show="users.length > 0"
-                      :class="['reaction-pill', { 'reacted': users.includes(userBeeId || '') }]"
-                      @click.stop="reactToBuzz(buzz, emoji)"
-                    >
-                      <span class="emoji">{{ emoji }}</span>
-                      <span class="count">{{ users.length }}</span>
-                    </div>
-                  </div>
                 </div>
+                <div class="scroll-bottom-anchor"></div>
               </div>
-              <div class="scroll-bottom-anchor"></div>
-            </div>
+            </ion-content>
           </div>
 
           <div class="drawer-footer">
@@ -229,7 +233,7 @@
             <div class="chat-input-row recording-row glass-panel gold-glow-mini vibrate-subtle" v-else>
                <div class="recording-status">
                  <div class="recording-dot"></div>
-                 <span class="recording-timer">{{ audioFormatTime(recordingTime) }} / 0:30</span>
+                 <span class="recording-timer">{{ audioFormatTimeHelper(recordingTime) }} / 0:30</span>
                </div>
                <div class="recording-actions">
                  <button @click="cancelAudioRecording" class="cancel-btn">CANCEL</button>
@@ -404,21 +408,30 @@
         </div>
       </ion-modal>
 
-      <!-- Emoji Picker Popover -->
       <ion-popover 
         :is-open="isEmojiPickerOpen" 
         :event="emojiPickerEvent"
-        @didDismiss="isEmojiPickerOpen = false"
+        @didDismiss="isEmojiPickerOpen = false; if(!confirmingDelete) selectedBuzzForReaction = null"
         class="emoji-picker-popover"
+        :show-backdrop="true"
       >
-        <div class="emoji-picker-content">
+        <div class="emoji-picker-container">
+          <div class="emoji-carousel">
+            <div 
+              v-for="emoji in commonEmojis" 
+              :key="emoji" 
+              class="emoji-option"
+              @click="handleEmojiSelect(emoji)"
+            >
+              {{ emoji }}
+            </div>
+          </div>
           <div 
-            v-for="emoji in commonEmojis" 
-            :key="emoji" 
-            class="emoji-option"
-            @click="handleEmojiSelect(emoji)"
+            v-if="selectedBuzzForReaction?.sender === userBeeId" 
+            class="emoji-delete-btn" 
+            @click="confirmDeleteBuzz"
           >
-            {{ emoji }}
+            <ion-icon :icon="trash"></ion-icon>
           </div>
         </div>
       </ion-popover>
@@ -437,7 +450,7 @@ import {
 import { 
   cameraOutline, paperPlaneOutline, addOutline, chatbubbleOutline, 
   closeOutline, informationCircleOutline, settingsOutline, trashOutline,
-  micOutline, stopOutline, checkmarkDoneOutline, alertCircleOutline
+  micOutline, stopOutline, checkmarkDoneOutline, alertCircleOutline, trash
 } from 'ionicons/icons';
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
@@ -469,6 +482,7 @@ const route = useRoute();
 const router = useRouter();
 const roomId = route.params.id as string;
 const roomService = useRoomService();
+const { deleteRoomBuzz } = roomService;
 const { userBeeId } = useUserService();
 const { 
   isRecording, 
@@ -476,8 +490,8 @@ const {
   startRecording, 
   stopRecording, 
   cancelRecording, 
-  uploadAudio,
-  formatTime: audioFormatTime 
+  uploadAudio: uploadAudioFile,
+  formatTime: audioFormatTimeHelper
 } = useAudioService();
 
 const startAudioRecording = async () => {
@@ -509,7 +523,7 @@ const sendAudioRecording = async () => {
         await Haptics.notification({ type: ImpactStyle.Light as any });
         
         // 1. Upload to storage
-        const audioUrl = await uploadAudio(blob, userBeeId.value || 'unknown');
+        const audioUrl = await uploadAudioFile(blob, userBeeId.value || 'unknown');
         
         // 2. Send to room
         if (room.value?.owner) {
@@ -563,6 +577,8 @@ const commonEmojis = ['❤️', '😂', '😮', '😢', '🔥', '🐝', '👍', 
 const isEmojiPickerOpen = ref(false);
 const emojiPickerEvent = ref<any>(null);
 const selectedBuzzForReaction = ref<any>(null);
+const confirmingDelete = ref(false);
+const activeActionSheet = ref<any>(null);
 
 // Dragging Logic
 const draggedBee = ref<BeeState | null>(null);
@@ -633,11 +649,56 @@ const showReactionPicker = (buzz: any, event: any) => {
   Haptics.impact({ style: ImpactStyle.Light });
 };
 
+const handleMessageLongPress = async (buzz: any, event: any) => {
+    Haptics.impact({ style: ImpactStyle.Medium });
+    
+    // Show the bubble for reactions and delete option
+    showReactionPicker(buzz, event);
+};
+
+const confirmDeleteBuzz = async () => {
+    if (!selectedBuzzForReaction.value) return;
+    confirmingDelete.value = true;
+    const msgId = selectedBuzzForReaction.value.id;
+    isEmojiPickerOpen.value = false;
+    
+    const alert = await alertController.create({
+        header: 'Delete Message?',
+        message: 'This will remove this message from the Hive Room for everyone.',
+        buttons: [
+            {
+                text: 'Cancel', 
+                role: 'cancel', 
+                handler: () => {
+                    confirmingDelete.value = false;
+                    selectedBuzzForReaction.value = null;
+                }
+            },
+            { 
+                text: 'Delete', 
+                handler: async () => {
+                   if (room.value?.owner) {
+                       await deleteRoomBuzz(roomId, msgId, room.value.owner);
+                   }
+                   confirmingDelete.value = false;
+                   selectedBuzzForReaction.value = null;
+                   Haptics.notification({ type: 'success' as any });
+                } 
+            }
+        ]
+    });
+    await alert.present();
+};
+
 const handleEmojiSelect = (emoji: string) => {
   if (selectedBuzzForReaction.value) {
     reactToBuzz(selectedBuzzForReaction.value, emoji);
   }
   isEmojiPickerOpen.value = false;
+  if (activeActionSheet.value) {
+    activeActionSheet.value.dismiss();
+    activeActionSheet.value = null;
+  }
 };
 
 const reactToBuzz = async (buzz: any, emoji: string) => {
@@ -855,11 +916,11 @@ watch(room, (newRoom) => {
     }
 });
 
-watch(currentRoomBuzzes, (newBuzzes) => {
-  setTimeout(scrollToBottom, 100);
+watch(() => currentRoomBuzzes.value.length, () => {
+  scrollToBottom();
 
-  if (newBuzzes && newBuzzes.length > 0) {
-      const latest = newBuzzes[0];
+  if (currentRoomBuzzes.value && currentRoomBuzzes.value.length > 0) {
+      const latest = currentRoomBuzzes.value[0]; 
       const messageAge = Date.now() - latest.timestamp;
       
       if (messageAge < 5000) {
@@ -886,32 +947,41 @@ const scrollToBottom = async (duration = 300) => {
   await nextTick();
   await nextTick();
   
-  const effort = () => {
+  const effort = async (d: number) => {
     if (chatScrollRef.value) {
-      const el = chatScrollRef.value;
-      el.scrollTop = el.scrollHeight;
-      
-      // Fallback search for anchor if scrollHeight is tricky
-      const anchor = el.querySelector('.scroll-bottom-anchor');
-      if (anchor) {
-        anchor.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      const content = chatScrollRef.value;
+      try {
+        // 1. Try Ionic scrollToBottom first
+        if (typeof content.scrollToBottom === 'function') {
+          await content.scrollToBottom(d);
+        } else if (content.$el && typeof content.$el.scrollToBottom === 'function') {
+          await content.$el.scrollToBottom(d);
+        } else {
+          // 2. Fallback to manual scroll on the element
+          const el = await content.getScrollElement();
+          if (el) {
+            el.scrollTop = el.scrollHeight;
+          }
+        }
+      } catch (err) {
+        // Silently fail if elements are not ready
       }
     }
   };
 
   // 1. Initial attempt
-  effort();
+  await effort(duration);
   
   // 2. Persistent retries for modal/rendering delay
   [50, 150, 300, 500, 800, 1200].forEach(delay => {
-    setTimeout(effort, delay);
+    setTimeout(() => effort(delay < 400 ? 0 : duration), delay);
   });
 };
 
 const handleBreakpointChange = (ev: any) => {
     // If expanded, ensure we scroll to latest
     if (ev.detail.breakpoint >= 0.45) {
-        setTimeout(scrollToBottom, 200);
+        scrollToBottom(0);
     }
 };
 
@@ -1025,6 +1095,7 @@ const handleSend = async () => {
     }
     
     Haptics.impact({ style: ImpactStyle.Light });
+    scrollToBottom();
   } catch (error) {
     const buzz = currentRoomBuzzes.value.find(b => b.id === temporaryId);
     if (buzz) {
@@ -1654,16 +1725,18 @@ const handleRemoveMember = async (memberId: string) => {
     border: 1px solid rgba(255, 191, 0, 0.3);
 }
 
-.chat-history-container {
+.chat-history-scroll {
     flex: 1;
-    overflow-y: auto;
+    --background: transparent;
+    height: 100%;
+}
+
+.chat-history-container {
     padding: 15px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    /* Prevent modal swipe-to-close from interfering with scrolling */
-    touch-action: pan-y;
-    -webkit-overflow-scrolling: touch;
+    gap: 5px;
+    min-height: 100%;
 }
 
 .chat-spacer {
@@ -1673,7 +1746,7 @@ const handleRemoveMember = async (memberId: string) => {
 .buzz-bubble-v2 {
     max-width: 80%;
     align-self: flex-start;
-    margin-bottom: 2px;
+    margin-bottom: 0px;
     transition: all 0.3s ease;
 }
 
@@ -1697,12 +1770,14 @@ const handleRemoveMember = async (memberId: string) => {
 }
 
 .buzz-content-v2 {
-    background: rgba(40, 40, 45, 0.4);
+    background: var(--glass-background);
+    backdrop-filter: var(--glass-blur-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-heavy);
     padding: 10px 14px;
     border-radius: 18px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
     position: relative;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    background: rgba(32, 30, 19, 0.658);
 }
 
 /* Grouping Logic for Others */
@@ -1723,7 +1798,7 @@ const handleRemoveMember = async (memberId: string) => {
 
 .buzz-content-v2.has-media {
     padding: 6px;
-    background: rgba(255, 255, 255, 0.05);
+    background: rgba(32, 30, 19, 0.658);
 }
 
 .own-buzz .buzz-content-v2.has-media {
@@ -2435,55 +2510,72 @@ const handleRemoveMember = async (memberId: string) => {
 
 /* Emoji Picker Carousel Styles */
 .emoji-picker-popover {
-  --width: fit-content;
-  --max-width: 90vw;
-  --backdrop-opacity: 0.1;
-  --background: transparent;
-  --box-shadow: none;
+    --width: 320px;
+    --height: 70px;
+    --background: rgba(0, 0, 0, 0.85);
+    --backdrop-filter: blur(24px);
+    --border-radius: 35px;
+    --box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    --backdrop-opacity: 0;
 }
 
-.emoji-picker-content {
-  display: flex;
-  overflow-x: auto;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x mandatory;
-  padding: 8px 12px;
-  gap: 8px;
-  background: rgba(30, 30, 30, 0.95);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-radius: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-  /* Hide scrollbar */
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.emoji-picker-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background: transparent;
 }
 
-.emoji-picker-content::-webkit-scrollbar {
-  display: none;
+.emoji-carousel {
+    flex: 1;
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    gap: 14px;
+    padding: 0 15px;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+}
+
+.emoji-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.emoji-delete-btn {
+    width: 54px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(235, 68, 90, 0.15);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    color: #eb445a;
+    font-size: 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.emoji-delete-btn:active {
+    background: rgba(235, 68, 90, 0.3);
 }
 
 .emoji-option {
-  font-size: 26px;
-  min-width: 48px;
-  height: 48px;
-  flex: 0 0 auto;
-  scroll-snap-align: center;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    font-size: 34px;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    flex-shrink: 0;
+    scroll-snap-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
 }
 
 .emoji-option:active {
-  transform: scale(1.4) translateY(-10px);
-}
-
-.emoji-option:hover {
-  transform: scale(1.2);
+    transform: scale(1.8);
 }
 
 </style>

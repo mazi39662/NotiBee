@@ -36,31 +36,31 @@
       <div class="hive-header" v-if="activeTab === 'hive' && !isSuperAdmin">
         <div class="header-right" :class="{ 'header-squash': true }">
           <!-- Primary Actions -->
-          <div @click="openNotificationsModal" class="nest-notif-btn gold-glow">
+          <div @click="openNotificationsModal" class="nest-notif-btn">
             <ion-icon :icon="notificationsOutline" class="radar-header-icon"></ion-icon>
             <div v-if="unreadCount > 0" class="notif-badge">{{ unreadCount }}</div>
           </div>
 
-          <div @click="router.push('/tabs/radar')" class="nest-notif-btn gold-glow">
+          <div @click="router.push('/tabs/radar')" class="nest-notif-btn">
             <ion-icon :icon="locationOutline" class="radar-header-icon"></ion-icon>
           </div>
 
-          <div @click="isRequestModalOpen = true" class="nest-notif-btn gold-glow">
-            <span class="emoji">🐝</span>
+          <div @click="isRequestModalOpen = true" class="nest-notif-btn">
+            <ion-icon :icon="peopleOutline" class="radar-header-icon"></ion-icon>
             <div v-if="pendingRequests.length > 0" class="notif-badge">{{ pendingRequests.length }}</div>
           </div>
 
           <!-- Collapsible Secondary Actions -->
           <div class="collapsible-wrapper" :class="{ 'is-expanded': isHeaderExpanded }">
             <div class="collapsible-inner">
-              <div @click="router.push('/tabs/leaderboard')" class="nest-notif-btn gold-glow secondary-btn">
+              <div @click="router.push('/tabs/leaderboard')" class="nest-notif-btn secondary-btn">
                 <ion-icon :icon="trophyOutline" class="radar-header-icon"></ion-icon>
               </div>
-              <div v-if="isAdmin" @click="router.push('/tabs/admin')" class="nest-notif-btn gold-glow secondary-btn">
-                <span class="emoji">🛡️</span>
+              <div v-if="isAdmin" @click="router.push('/tabs/admin')" class="nest-notif-btn secondary-btn">
+                <ion-icon :icon="shieldOutline" class="radar-header-icon"></ion-icon>
               </div>
-              <div @click="isGardenModalOpen = true" class="nest-notif-btn gold-glow secondary-btn">
-                <ion-icon :icon="leafOutline" class="radar-header-icon"></ion-icon>
+              <div @click="isGardenModalOpen = true" class="nest-notif-btn secondary-btn">
+                <ion-icon :icon="optionsOutline" class="radar-header-icon"></ion-icon>
               </div>
             </div>
           </div>
@@ -93,7 +93,7 @@
           <div class="bee-wrapper">
             <!-- Message Bubble -->
             <transition name="pop">
-              <div v-if="bee.lastMessage" class="buzz-bubble">
+              <div v-if="bee.lastMessage" class="buzz-bubble" @contextmenu.prevent="handleFlashBuzzLongPress(bee)">
                 <p>{{ truncateMessage(bee.lastMessage) }}</p>
               </div>
             </transition>
@@ -166,6 +166,7 @@
             :key="convo.beeId" 
             class="convo-item"
             @click="openConvoFromList(convo)"
+            @contextmenu.prevent="handleConvoLongPress(convo)"
            >
               <div class="convo-avatar">
                  <div class="hex-mini">
@@ -484,7 +485,7 @@
                 <div class="compact-details">
                   <h3 @click="goToProfile(selectedBee?.beeId)">{{ selectedBee?.beeId }}</h3>
                   <span :class="['mini-status', { online: selectedBee?.isOnline }]">
-                    {{ selectedBee?.isOnline ? 'Online' : 'Offline' }}
+                    {{ getOfflineDuration(selectedBee?.lastSeen) }}
                   </span>
                 </div>
               </div>
@@ -587,7 +588,7 @@
                             'has-next': idx < currentBeeHistory.length - 1 && currentBeeHistory[idx+1].sender === b.sender
                           }
                         ]"
-                        @contextmenu.prevent="showReactionPicker(b, $event)"
+                        @contextmenu.prevent="handleMessageLongPress(b, $event)"
                       >
                         <div class="msg-bubble" :class="{ 'has-media': b.image || b.audioUrl }" @click="handleMessageClick(b)">
                           <div v-if="b.image" class="msg-image-wrapper">
@@ -633,7 +634,7 @@
 
           <!-- Fixed Footer (History Mode) -->
           <div v-if="isViewingHistory" class="modal-footer animate-in">
-            <div class="chat-input-area glass-panel gold-glow-mini" v-if="!isRecording">
+             <div class="chat-input-area glass-panel gold-glow-mini" v-if="!isRecording">
                 <button @click="takePhoto" class="chat-tool-btn">
                     <ion-icon :icon="selectedImage ? imageOutline : cameraOutline" :class="{ 'has-img': selectedImage }"></ion-icon>
                 </button>
@@ -688,21 +689,26 @@
         </div>
       </ion-modal>
 
-      <!-- Emoji Picker Popover -->
       <ion-popover 
         :is-open="isEmojiPickerOpen" 
         :event="emojiPickerEvent"
-        @didDismiss="isEmojiPickerOpen = false"
+        @didDismiss="isEmojiPickerOpen = false; if(!confirmingDelete) selectedBuzzForReaction = null"
         class="emoji-picker-popover"
+        :show-backdrop="true"
       >
-        <div class="emoji-picker-content">
-          <div 
-            v-for="emoji in commonEmojis" 
-            :key="emoji" 
-            class="emoji-option"
-            @click="handleEmojiSelect(emoji)"
-          >
-            {{ emoji }}
+        <div class="emoji-picker-container">
+          <div class="emoji-carousel">
+            <div 
+              v-for="emoji in commonEmojis" 
+              :key="emoji" 
+              class="emoji-option"
+              @click="handleEmojiSelect(emoji)"
+            >
+              {{ emoji }}
+            </div>
+          </div>
+          <div class="emoji-delete-btn" @click="confirmDeleteBuzz">
+            <ion-icon :icon="trash"></ion-icon>
           </div>
         </div>
       </ion-popover>
@@ -727,7 +733,7 @@ import {
   chevronDown, trash, closeOutline, alertCircleOutline,
   timeOutline, chatbubbleOutline, cameraOutline, imageOutline, closeCircle,
   qrCodeOutline, locationOutline, scanOutline, trophyOutline, micOutline, notificationsOutline, personAddOutline,
-  checkmark, checkmarkDone, leafOutline, eyeOutline, eyeOffOutline
+  checkmark, checkmarkDone, leafOutline, eyeOutline, eyeOffOutline, shieldOutline, peopleOutline, optionsOutline
 } from 'ionicons/icons';
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import HiveSplash from '@/components/HiveSplash.vue';
@@ -758,11 +764,13 @@ interface BeeState {
   isDragging?: boolean;
   customization?: { top: string, body: string, eyes: string };
   isFlipped?: boolean;
+  lastSeen?: string;
 }
 
 const { 
     sendBuzz, sendAudioBuzz, sendVibrate, buzzes, saveHistoryEnabled, 
-    getBuzzesForBee, sendBuzzReaction, unreadCounts, clearUnread, sendReadReceipt
+    getBuzzesForBee, sendBuzzReaction, unreadCounts, clearUnread, sendReadReceipt,
+    deleteBuzz, deleteConversation
 } = useBuzzService();
 const { 
   isRecording, 
@@ -792,6 +800,9 @@ const filteredConversations = computed(() => {
     const map = new Map<string, any>();
     
     buzzes.value.forEach(b => {
+        // Exclude room buzzes from standard message history
+        if (b.type === 'ROOM_BUZZ' || b.type === 'ROOM_BUZZ_AUDIO') return;
+
         const partnerId = b.sender === userBeeId.value ? b.recipient : b.sender;
         if (!partnerId || partnerId === 'You') return;
         
@@ -1040,6 +1051,8 @@ const commonEmojis = ['❤️', '😂', '😮', '😢', '🔥', '🐝', '👍', 
 const isEmojiPickerOpen = ref(false);
 const emojiPickerEvent = ref<any>(null);
 const selectedBuzzForReaction = ref<any>(null);
+const confirmingDelete = ref(false);
+const activeActionSheet = ref<any>(null);
 
 const gardenActive = ref(false);
 
@@ -1299,6 +1312,34 @@ const isOnline = (lastSeen?: string) => {
     return (now - lastActive) < 1000 * 60 * 1; // Online if seen in last 1 min
 };
 
+const getOfflineDuration = (lastSeen?: string): string => {
+    if (!lastSeen) return 'Offline';
+    
+    const lastActive = new Date(lastSeen).getTime();
+    const now = Date.now();
+    const diff = now - lastActive;
+    const seconds = Math.floor(diff / 1000);
+    
+    // If online (within 1 minute), return 'Online'
+    if (seconds < 60) return 'Online';
+    
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `Offline ${minutes}m`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Offline ${hours}h`;
+    
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `Offline ${days}d`;
+    
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) return `Offline ${weeks}w`;
+    
+    const months = Math.floor(days / 30);
+    return `Offline ${months}mo`;
+};
+
+
 const myCustomization = computed(() => {
     const stored = localStorage.getItem('bee_customization');
     if (stored) return JSON.parse(stored);
@@ -1375,6 +1416,7 @@ watch([colonyBeesData, myBeeData, userBeeId], ([colonyData, me, myId]) => {
     const existing = beeStates.value.find(b => b.beeId === bee.beeId);
     if (existing) {
         existing.isOnline = isOnline(bee.lastSeen);
+        existing.lastSeen = bee.lastSeen;
         if (bee.pushToken) existing.pushToken = bee.pushToken;
         if (bee.customization) existing.customization = bee.customization;
     }
@@ -1413,6 +1455,7 @@ watch([colonyBeesData, myBeeData, userBeeId], ([colonyData, me, myId]) => {
       beeStates.value.push({
         beeId: id,
         isOnline: id === myId,
+        lastSeen: rawBee?.lastSeen,
         pushToken: rawBee?.pushToken,
         x: pos.x,
         y: pos.y,
@@ -1543,6 +1586,9 @@ watch(buzzes, (newBuzzes) => {
     
     if (messageAge > 10000) return;
 
+    // Exclude room buzzes from hive bubbles
+    if (latest.type === 'ROOM_BUZZ' || latest.type === 'ROOM_BUZZ_AUDIO') return;
+
     const bee = beeStates.value.find(b => b.beeId === latest.sender);
     if (bee) {
         bee.lastMessage = latest.message;
@@ -1589,6 +1635,7 @@ onMounted(async () => {
           const rawBee = [...colonyBeesData.value, myBeeData.value].find(b => b?.beeId === bee.beeId);
           if (rawBee) {
               bee.isOnline = bee.beeId === userBeeId.value ? true : isOnline(rawBee.lastSeen);
+              bee.lastSeen = rawBee.lastSeen;
           }
       });
   }, 10000);
@@ -1875,11 +1922,129 @@ const showReactionPicker = (buzz: any, event: any) => {
   Haptics.impact({ style: ImpactStyle.Light });
 };
 
+const handleMessageLongPress = async (buzz: any, event: any) => {
+    Haptics.impact({ style: ImpactStyle.Medium });
+    
+    // Show the bubble for reactions and delete option
+    showReactionPicker(buzz, event);
+};
+
+const handleFlashBuzzLongPress = async (bee: any) => {
+    Haptics.impact({ style: ImpactStyle.Medium });
+    const actionSheet = await actionSheetController.create({
+        header: `Buzz from ${bee.beeId}`,
+        buttons: [
+            {
+                text: 'Dismiss Bubble',
+                icon: closeOutline,
+                handler: () => {
+                   bee.lastMessage = undefined;
+                   bee.lastMessageId = undefined;
+                   Haptics.impact({ style: ImpactStyle.Light });
+                }
+            },
+            {
+                text: 'Delete Thread',
+                role: 'destructive',
+                icon: trash,
+                handler: () => {
+                    confirmClearConversation(bee.beeId);
+                }
+            },
+            {
+                text: 'Cancel',
+                role: 'cancel',
+                icon: closeOutline
+            }
+        ],
+        cssClass: 'nest-action-sheet'
+    });
+    await actionSheet.present();
+};
+
+const handleConvoLongPress = async (convo: any) => {
+    Haptics.impact({ style: ImpactStyle.Medium });
+    const actionSheet = await actionSheetController.create({
+        header: `Manage Buzz with ${convo.beeId}`,
+        buttons: [
+            {
+                text: 'Delete Conversation',
+                role: 'destructive',
+                icon: trash,
+                handler: () => {
+                    confirmClearConversation(convo.beeId);
+                }
+            },
+            {
+                text: 'Cancel',
+                role: 'cancel',
+                icon: closeOutline
+            }
+        ],
+        cssClass: 'nest-action-sheet'
+    });
+    await actionSheet.present();
+};
+
+const confirmClearConversation = async (beeId: string) => {
+    const alert = await alertController.create({
+        header: 'Delete Conversation?',
+        message: `This will permanently remove your local chat history with ${beeId}.`,
+        buttons: [
+            { text: 'Cancel', role: 'cancel' },
+            { 
+                text: 'Delete', 
+                handler: () => {
+                    deleteConversation(beeId);
+                    Haptics.notification({ type: 'success' as any });
+                } 
+            }
+        ]
+    });
+    await alert.present();
+};
+
+const confirmDeleteBuzz = async () => {
+    if (!selectedBuzzForReaction.value) return;
+    confirmingDelete.value = true;
+    const msgId = selectedBuzzForReaction.value.id;
+    isEmojiPickerOpen.value = false;
+    
+    const alert = await alertController.create({
+        header: 'Delete Message?',
+        message: 'This will remove this message from your local history.',
+        buttons: [
+            {
+                text: 'Cancel', 
+                role: 'cancel', 
+                handler: () => {
+                    confirmingDelete.value = false;
+                    selectedBuzzForReaction.value = null;
+                }
+            },
+            { 
+                text: 'Delete', 
+                handler: () => {
+                   deleteBuzz(msgId);
+                   confirmingDelete.value = false;
+                   selectedBuzzForReaction.value = null;
+                   Haptics.notification({ type: 'success' as any });
+                } 
+            }
+        ]
+    });
+    await alert.present();
+};
+
 const handleEmojiSelect = (emoji: string) => {
   if (selectedBuzzForReaction.value && selectedBee.value) {
     reactToBuzz(selectedBuzzForReaction.value, emoji);
   }
   isEmojiPickerOpen.value = false;
+  if (activeActionSheet.value) {
+    activeActionSheet.value.dismiss();
+    activeActionSheet.value = null;
+  }
 };
 
 const reactToBuzz = async (buzz: any, emoji: string) => {
@@ -2110,7 +2275,7 @@ const handleNotifClick = (notif: any) => {
 .convo-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
 }
 
 .convo-item {
@@ -2265,7 +2430,7 @@ const handleNotifClick = (notif: any) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   /* Ensure transform origin is center for the squash effect */
   transform-origin: center top;
 }
@@ -2303,9 +2468,7 @@ const handleNotifClick = (notif: any) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
- 
-
+  gap: 6px;
 }
 
 /* Stretch and Squash Animation */
@@ -2601,7 +2764,7 @@ const handleNotifClick = (notif: any) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 5px;
 }
 
 .giant-emoji {
@@ -3089,7 +3252,7 @@ const handleNotifClick = (notif: any) => {
 .requests-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 5px;
 }
 
 .request-card {
@@ -3230,7 +3393,7 @@ const handleNotifClick = (notif: any) => {
     flex-direction: column;
     justify-content: flex-end;
     flex: 1;
-    gap: 12px;
+    gap: 5px;
     margin-top: 10px;
     padding-bottom: 20px;
 }
@@ -3389,7 +3552,7 @@ const handleNotifClick = (notif: any) => {
     display: flex;
     flex-direction: column;
     max-width: 80%;
-    margin-bottom: 2px;
+    margin-bottom: 0;
     transition: all 0.2s ease;
 }
 
@@ -3406,7 +3569,7 @@ const handleNotifClick = (notif: any) => {
 }
 
 .msg-bubble {
-    padding: 10px 14px;
+    padding: 0px 14px;
     border-radius: 18px;
     position: relative;
     font-size: 15px;
@@ -3421,14 +3584,14 @@ const handleNotifClick = (notif: any) => {
 }
 
 /* Grouping Logic for Sent (Own) */
-.history-item.sent.is-first .msg-bubble { border-bottom-right-radius: 4px; }
-.history-item.sent.has-next .msg-bubble { border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
-.history-item.sent.is-last:not(.is-first) .msg-bubble { border-top-right-radius: 4px; border-bottom-right-radius: 18px; }
+.history-item.sent.is-first .msg-bubble { border-bottom-right-radius: 2px; }
+.history-item.sent.has-next .msg-bubble { border-top-right-radius: 2px; border-bottom-right-radius: 2px; }
+.history-item.sent.is-last:not(.is-first) .msg-bubble { border-top-right-radius: 2px; border-bottom-right-radius: 18px; }
 
 /* Grouping Logic for Received (Partner) */
-.history-item.received.is-first .msg-bubble { border-bottom-left-radius: 4px; }
-.history-item.received.has-next .msg-bubble { border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
-.history-item.received.is-last:not(.is-first) .msg-bubble { border-top-left-radius: 4px; border-bottom-left-radius: 18px; }
+.history-item.received.is-first .msg-bubble { border-bottom-left-radius: 2px; }
+.history-item.received.has-next .msg-bubble { border-top-left-radius: 2px; border-bottom-left-radius: 2px; }
+.history-item.received.is-last:not(.is-first) .msg-bubble { border-top-left-radius: 2px; border-bottom-left-radius: 18px; }
 
 .history-item.sent .msg-bubble {
     background: linear-gradient(135deg, #ffbf00, #ff9d00);
@@ -3437,19 +3600,21 @@ const handleNotifClick = (notif: any) => {
 }
 
 .history-item.received .msg-bubble {
-    background: rgba(45, 45, 50, 0.4);
+    background: rgba(19, 25, 32, 0.658);
     color: #efefef;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-blur-heavy);
+    -webkit-backdrop-filter: var(--glass-blur-heavy);
 }
 
 .msg-time {
     font-size: 10px;
     opacity: 0.4;
-    margin-top: 4px;
+    margin-top: 5px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 4px;
+    gap: 5px;
 }
 
 .sent .msg-time {
@@ -3969,4 +4134,75 @@ const handleNotifClick = (notif: any) => {
   color: #ff4757 !important;
   font-weight: 600;
 }
+
+.emoji-picker-popover {
+    --width: 320px;
+    --height: 70px;
+    --background: rgba(0, 0, 0, 0.85);
+    --backdrop-filter: blur(24px);
+    --border-radius: 35px;
+    --box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    --backdrop-opacity: 0;
+}
+
+.emoji-picker-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    background: transparent;
+}
+
+.emoji-carousel {
+    flex: 1;
+    display: flex;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    gap: 14px;
+    padding: 0 15px;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+}
+
+.emoji-carousel::-webkit-scrollbar {
+    display: none;
+}
+
+.emoji-delete-btn {
+    width: 54px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(235, 68, 90, 0.15);
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    color: #eb445a;
+    font-size: 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.emoji-delete-btn:active {
+    background: rgba(235, 68, 90, 0.3);
+}
+
+.emoji-option {
+    font-size: 34px;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    flex-shrink: 0;
+    scroll-snap-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+}
+
+.emoji-option:active {
+    transform: scale(1.8);
+}
+
+
 </style>

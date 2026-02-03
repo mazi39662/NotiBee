@@ -16,6 +16,7 @@ export interface Buzz {
   status: 'sending' | 'sent' | 'delivered' | 'read' | 'error';
   timestamp: string;
   reactions?: Record<string, string[]>;
+  type?: string;
 }
 
 const STORAGE_KEY = 'notibee_history';
@@ -99,7 +100,7 @@ export const useBuzzService = () => {
     }
   };
 
-  const addReceivedBuzz = (sender: string, message: string, image?: string, audioUrl?: string, duration?: number, msgId?: string) => {
+  const addReceivedBuzz = (sender: string, message: string, image?: string, audioUrl?: string, duration?: number, msgId?: string, type?: string) => {
     const buzz: Buzz = {
       id: msgId || 'rx_' + Date.now().toString(),
       sender,
@@ -111,12 +112,13 @@ export const useBuzzService = () => {
       time: new Date().toLocaleTimeString(),
       status: 'delivered',
       timestamp: new Date().toISOString(),
-      reactions: {}
+      reactions: {},
+      type
     };
     saveToLocal(buzz);
   };
 
-  const addSentBuzz = (recipient: string, message: string, senderId: string, image?: string, audioUrl?: string, duration?: number, msgId?: string, forceStatus?: Buzz['status']) => {
+  const addSentBuzz = (recipient: string, message: string, senderId: string, image?: string, audioUrl?: string, duration?: number, msgId?: string, forceStatus?: Buzz['status'], type?: string) => {
     const buzz: Buzz = {
       id: msgId || 'tx_' + Date.now().toString(),
       sender: senderId,
@@ -128,7 +130,8 @@ export const useBuzzService = () => {
       time: new Date().toLocaleTimeString(),
       status: forceStatus || 'sent',
       timestamp: new Date().toISOString(),
-      reactions: {}
+      reactions: {},
+      type
     };
     saveToLocal(buzz);
   };
@@ -177,7 +180,7 @@ export const useBuzzService = () => {
 
                 // Only save to history if it's a standard message or has content
                 if (!data.type || data.type === 'BUZZ' || data.type === 'AUDIO' || data.type === 'ROOM_BUZZ' || data.type === 'ROOM_BUZZ_AUDIO') {
-                  addReceivedBuzz(data.from, data.message, data.image, data.audioUrl, data.duration, data.msgId);
+                  addReceivedBuzz(data.from, data.message, data.image, data.audioUrl, data.duration, data.msgId, data.type);
                   incrementUnread(data.from);
                 }
               }
@@ -204,12 +207,23 @@ export const useBuzzService = () => {
     localStorage.removeItem(STORAGE_KEY);
   };
 
+  const deleteBuzz = (msgId: string) => {
+    buzzes.value = buzzes.value.filter(b => b.id !== msgId);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(buzzes.value));
+  };
+
+  const deleteConversation = (beeId: string) => {
+    buzzes.value = buzzes.value.filter(b => b.sender !== beeId && b.recipient !== beeId);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(buzzes.value));
+    clearUnread(beeId);
+  };
+
   const sendBuzz = async (recipientId: string, message: string, senderId: string, recipientToken: string, image?: string) => {
     console.log(`🚀 Sending buzz to ${recipientId} from ${senderId}...`);
     const sharedId = 'buzz_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
     // Add to local history immediately for UX
-    addSentBuzz(recipientId, message, senderId, image, undefined, undefined, sharedId, 'sending');
+    addSentBuzz(recipientId, message, senderId, image, undefined, undefined, sharedId, 'sending', 'BUZZ');
 
     try {
       // 1. Write to RECIPIENT'S inbox for real-time bubble (Foreground / Free Relay)
@@ -266,7 +280,7 @@ export const useBuzzService = () => {
     const { deleteFromStorage } = useAudioService();
 
     // Add to local history immediately
-    addSentBuzz(recipientId, '🎙️ Audio Message', senderId, undefined, audioUrl, duration, sharedId, 'sending');
+    addSentBuzz(recipientId, '🎙️ Audio Message', senderId, undefined, audioUrl, duration, sharedId, 'sending', 'AUDIO');
 
     try {
       const inboxRef = collection(db, 'users', recipientId, 'inbox');
@@ -484,7 +498,11 @@ export const useBuzzService = () => {
   };
 
   const getBuzzesForBee = (beeId: string) => {
-    return buzzes.value.filter(b => b.sender === beeId || b.recipient === beeId);
+    return buzzes.value.filter(b =>
+      (b.sender === beeId || b.recipient === beeId) &&
+      b.type !== 'ROOM_BUZZ' &&
+      b.type !== 'ROOM_BUZZ_AUDIO'
+    );
   };
 
   return {
@@ -505,6 +523,8 @@ export const useBuzzService = () => {
     incrementUnread,
     clearUnread,
     sendReadReceipt,
-    updateBuzzStatus
+    updateBuzzStatus,
+    deleteBuzz,
+    deleteConversation
   };
 };

@@ -173,7 +173,7 @@
                     class="cta-btn"
                     @click.stop="handleAdCTA(story)"
                   >
-                    {{ (story as any).ctaLabel || 'Learn More' }}
+                    {{ story.ctaLabel || 'Learn More' }}
                     <ion-icon :icon="flash" slot="end"></ion-icon>
                   </ion-button>
                 </div>
@@ -698,18 +698,17 @@ import {
   IonButtons, IonButton, IonIcon, IonModal, IonTextarea,
   IonSpinner, IonActionSheet, IonRefresher, IonRefresherContent,
   IonInfiniteScroll, IonInfiniteScrollContent, IonFooter,
-  IonSegment, IonSegmentButton, IonLabel,
+  IonSegment, IonSegmentButton, IonLabel, IonPopover,
   alertController, toastController
 } from '@ionic/vue';
 import {
   addCircleOutline, heartOutline, heart, eyeOutline,
   trashOutline, closeOutline, cameraOutline, imagesOutline,
   createOutline, chevronDownCircleOutline, chatbubbleOutline,
-  paperPlaneOutline, leafOutline, leaf, eyeOutline as eye,
+  paperPlaneOutline, leafOutline, leaf,
   informationCircleOutline, happyOutline, flash, alertCircleOutline, checkmarkDoneOutline
 } from 'ionicons/icons';
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
-import { IonPopover } from '@ionic/vue';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useMyDaysService, Story } from '@/services/MyDaysService';
 import { useAdService } from '@/services/AdService';
@@ -720,6 +719,7 @@ import BeeComposite from '@/components/BeeComposite.vue';
 import { useRouter } from 'vue-router';
 import { Keyboard } from '@capacitor/keyboard';
 import { Capacitor } from '@capacitor/core';
+import HiveSplash from '@/components/HiveSplash.vue';
 
 const commentsModal = ref<any>(null);
 const commentsListRef = ref<HTMLElement | null>(null);
@@ -736,6 +736,40 @@ const honeyJarIcon = '🏺';
 
 const { userBeeId, getFriends, getUserProfile } = useUserService();
 const friends = getFriends();
+const {
+  stories,
+  myStories,
+  isLoading,
+  createStory,
+  createTextStory,
+  uploadStory,
+  batchUploadStories,
+  fetchStories,
+  deleteExpiredStories,
+  deleteStory,
+  likeStory,
+  unlikeStory,
+  markAsViewed,
+  addComment,
+  reactToComment,
+  getStoriesByUser,
+  initStoriesListener,
+  hasLiked,
+  hasMore,
+  getTimeRemaining,
+  reportStory,
+  integratedStories
+} = useMyDaysService();
+
+const { 
+  trackAdClick, 
+  trackAdView, 
+  fetchAds, 
+  initializeAdMob, 
+  showInterstitial,
+  showRewarded
+} = useAdService();
+
 const revealedViewers = ref(new Set<string>());
 const selectedSegment = ref('everyone');
 
@@ -845,39 +879,6 @@ const handleGetFreeJar = () => {
   });
 };
 
-const {
-  stories,
-  myStories,
-  isLoading,
-  createStory,
-  createTextStory,
-  uploadStory,
-  batchUploadStories,
-  fetchStories,
-  deleteExpiredStories,
-  deleteStory,
-  likeStory,
-  unlikeStory,
-  markAsViewed,
-  addComment,
-  reactToComment,
-  getStoriesByUser,
-  initStoriesListener,
-  hasLiked,
-  hasMore,
-  getTimeRemaining,
-  reportStory,
-  integratedStories
-} = useMyDaysService();
-
-const { 
-  trackAdClick, 
-  trackAdView, 
-  fetchAds, 
-  initializeAdMob, 
-  showInterstitial,
-  showRewarded
-} = useAdService();
 
 const handleItemClick = (item: any) => {
   if (item.isAd) {
@@ -1063,9 +1064,8 @@ const pendingImageData = ref<string | null>(null);
 
 let cleanupInterval: number | null = null;
 
-import HiveSplash from '@/components/HiveSplash.vue';
 
-// ... (existing refs)
+// Story management state
 
 const slideIndices = ref<Record<string, number>>({});
 let slideInterval: number | null = null;

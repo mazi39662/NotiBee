@@ -408,6 +408,12 @@ export const useRoomService = () => {
         await batch.commit();
     };
 
+    const deleteRoomBuzz = async (roomId: string, buzzId: string, ownerId: string) => {
+        if (!userBeeId) return;
+        const buzzRef = doc(db, 'users', ownerId, 'rooms', roomId, 'buzzes', buzzId);
+        await deleteDoc(buzzRef);
+    };
+
     return {
         rooms,
         currentRoomBuzzes,
@@ -425,6 +431,7 @@ export const useRoomService = () => {
         removeRoomMember,
         sendRoomAudioBuzz,
         reactToBuzz,
-        markRoomStoryAsViewed
+        markRoomStoryAsViewed,
+        deleteRoomBuzz
     };
 };
