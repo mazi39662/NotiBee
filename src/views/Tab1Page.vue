@@ -34,24 +34,40 @@
       </div>
 
       <div class="hive-header" v-if="activeTab === 'hive' && !isSuperAdmin">
-        <div class="header-right">
-           <div @click="openNotificationsModal" class="nest-notif-btn gold-glow">
+        <div class="header-right" :class="{ 'header-squash': true }">
+          <!-- Primary Actions -->
+          <div @click="openNotificationsModal" class="nest-notif-btn gold-glow">
             <ion-icon :icon="notificationsOutline" class="radar-header-icon"></ion-icon>
             <div v-if="unreadCount > 0" class="notif-badge">{{ unreadCount }}</div>
           </div>
 
           <div @click="router.push('/tabs/radar')" class="nest-notif-btn gold-glow">
-              <ion-icon :icon="locationOutline" class="radar-header-icon"></ion-icon>
-           </div>
-          <div @click="router.push('/tabs/leaderboard')" class="nest-notif-btn gold-glow">
-            <ion-icon :icon="trophyOutline" class="radar-header-icon"></ion-icon>
+            <ion-icon :icon="locationOutline" class="radar-header-icon"></ion-icon>
           </div>
-          <div v-if="isAdmin" @click="router.push('/tabs/admin')" class="nest-notif-btn gold-glow">
-            <span class="emoji">🛡️</span>
-          </div>
+
           <div @click="isRequestModalOpen = true" class="nest-notif-btn gold-glow">
             <span class="emoji">🐝</span>
             <div v-if="pendingRequests.length > 0" class="notif-badge">{{ pendingRequests.length }}</div>
+          </div>
+
+          <!-- Collapsible Secondary Actions -->
+          <div class="collapsible-wrapper" :class="{ 'is-expanded': isHeaderExpanded }">
+            <div class="collapsible-inner">
+              <div @click="router.push('/tabs/leaderboard')" class="nest-notif-btn gold-glow secondary-btn">
+                <ion-icon :icon="trophyOutline" class="radar-header-icon"></ion-icon>
+              </div>
+              <div v-if="isAdmin" @click="router.push('/tabs/admin')" class="nest-notif-btn gold-glow secondary-btn">
+                <span class="emoji">🛡️</span>
+              </div>
+              <div @click="isGardenModalOpen = true" class="nest-notif-btn gold-glow secondary-btn">
+                <ion-icon :icon="leafOutline" class="radar-header-icon"></ion-icon>
+              </div>
+            </div>
+          </div>
+
+          <!-- Toggle Toggle (Arrow moved to bottom) -->
+          <div @click="toggleHeader" class="nest-notif-btn toggle-btn gold-glow" :class="{ 'toggle-active': isHeaderExpanded }">
+            <ion-icon :icon="chevronDown" class="toggle-icon" :class="{ 'rotated': isHeaderExpanded }"></ion-icon>
           </div>
         </div>
       </div>
@@ -60,6 +76,7 @@
       <div v-if="activeTab === 'hive' && !isSuperAdmin" class="hive-background">
         <div 
           v-for="bee in beeStates" 
+          v-show="isBeeVisible(bee.beeId)"
           :key="bee.beeId" 
           :class="['flying-bee', { 'is-me': bee.beeId === userBeeId, 'dragging': bee.isDragging }]"
           :style="{
@@ -335,6 +352,68 @@
                       </div>
                       <div v-if="!notif.read" class="unread-dot-notif"></div>
                   </div>
+              </div>
+            </div>
+          </ion-content>
+        </div>
+      </ion-modal>
+
+      <!-- Garden Management Modal -->
+      <ion-modal 
+        :is-open="isGardenModalOpen" 
+        @didDismiss="isGardenModalOpen = false; gardenSearchQuery = ''"
+        :initial-breakpoint="0.7"
+        :breakpoints="[0, 0.7, 1]"
+        class="search-modal"
+      >
+        <div class="modal-wrapper">
+          <div class="modal-header">
+            <h2 style="margin: 0;">Garden Management</h2>
+            <p style="margin: 5px 0 0;">Toggle which bees appear in your garden swarm.</p>
+          </div>
+          <ion-content class="modal-main-content" :scroll-y="true">
+            <div class="modal-body-inner" style="padding-top: 0;">
+              <!-- Search Bar -->
+              <div class="search-input-area glass-panel" style="margin-bottom: 20px; margin-top: 10px;">
+                <ion-item lines="none" class="search-item">
+                  <ion-icon :icon="searchOutline" slot="start"></ion-icon>
+                  <ion-input 
+                    placeholder="Search bees in garden..." 
+                    v-model="gardenSearchQuery" 
+                    class="custom-input"
+                  ></ion-input>
+                </ion-item>
+              </div>
+
+              <div v-if="filteredGardenBees.length === 0" class="empty-requests">
+                <span class="giant-emoji">🐝</span>
+                <p>No bees found matching "{{ gardenSearchQuery }}"</p>
+              </div>
+              
+              <div v-else class="requests-list">
+                <div v-for="bee in filteredGardenBees" :key="bee.beeId" class="request-card glass-panel garden-manage-item">
+                  <div class="request-info">
+                    <div class="mini-bee-avatar">
+                      <BeeComposite 
+                        :customization="bee.customization" 
+                        :scale="0.18" 
+                        :animated="true" 
+                      />
+                    </div>
+                    <div class="request-details">
+                      <h3>{{ bee.beeId === userBeeId ? 'YOU' : bee.beeId }}</h3>
+                      <p :class="{ 'hidden-status': !isBeeVisible(bee.beeId) }">
+                        {{ isBeeVisible(bee.beeId) ? 'Buzzing in Garden' : 'Resting / Hidden' }}
+                      </p>
+                    </div>
+                  </div>
+                  <ion-toggle 
+                    mode="ios"
+                    class="garden-toggle"
+                    :checked="isBeeVisible(bee.beeId)"
+                    @ionChange="toggleGardenBee(bee.beeId)"
+                  ></ion-toggle>
+                </div>
               </div>
             </div>
           </ion-content>
@@ -641,14 +720,14 @@ import {
   onIonViewWillEnter,
   toastController, alertController, actionSheetController, IonFab, IonFabButton, IonInput,
   IonRefresher, IonRefresherContent, IonButton, IonItem, IonLabel, IonList, IonHeader, IonToolbar, IonTitle,
-  IonPopover, IonFooter
+  IonPopover, IonFooter, IonToggle
 } from '@ionic/vue';
 import { 
   flash, checkmarkCircleOutline, add, searchOutline, 
   chevronDown, trash, closeOutline, alertCircleOutline,
   timeOutline, chatbubbleOutline, cameraOutline, imageOutline, closeCircle,
   qrCodeOutline, locationOutline, scanOutline, trophyOutline, micOutline, notificationsOutline, personAddOutline,
-  checkmark, checkmarkDone
+  checkmark, checkmarkDone, leafOutline, eyeOutline, eyeOffOutline
 } from 'ionicons/icons';
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import HiveSplash from '@/components/HiveSplash.vue';
@@ -911,6 +990,35 @@ const isModalOpen = ref(false);
 const isViewingHistory = ref(false);
 const isRequestModalOpen = ref(false);
 const isNotifModalOpen = ref(false);
+const isGardenModalOpen = ref(false);
+const isHeaderExpanded = ref(false);
+
+const toggleHeader = () => {
+    isHeaderExpanded.value = !isHeaderExpanded.value;
+    Haptics.impact({ style: ImpactStyle.Light });
+};
+const hiddenBeeIds = ref<string[]>(JSON.parse(localStorage.getItem('hidden_garden_bees') || '[]'));
+
+const toggleGardenBee = (beeId: string) => {
+    if (hiddenBeeIds.value.includes(beeId)) {
+        hiddenBeeIds.value = hiddenBeeIds.value.filter(id => id !== beeId);
+    } else {
+        hiddenBeeIds.value.push(beeId);
+    }
+    localStorage.setItem('hidden_garden_bees', JSON.stringify(hiddenBeeIds.value));
+    Haptics.impact({ style: ImpactStyle.Light });
+};
+
+const isBeeVisible = (beeId: string) => !hiddenBeeIds.value.includes(beeId);
+
+const gardenSearchQuery = ref('');
+const filteredGardenBees = computed(() => {
+    if (!gardenSearchQuery.value.trim()) return beeStates.value;
+    const q = gardenSearchQuery.value.toLowerCase();
+    return beeStates.value.filter(bee => 
+        bee.beeId.toLowerCase().includes(q)
+    );
+});
 
 const openNotificationsModal = () => {
     markAllAsRead();
@@ -2158,6 +2266,74 @@ const handleNotifClick = (notif: any) => {
   flex-direction: column;
   align-items: center;
   gap: 12px;
+  /* Ensure transform origin is center for the squash effect */
+  transform-origin: center top;
+}
+
+.toggle-btn {
+  background: rgba(255, 191, 0, 0.1) !important;
+  border-color: rgba(255, 191, 0, 0.3) !important;
+}
+
+.toggle-icon {
+  font-size: 20px;
+  color: var(--ion-color-primary);
+  transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.toggle-icon.rotated {
+  transform: rotate(180deg);
+}
+
+.collapsible-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.3s ease;
+  opacity: 0;
+  width: 100%;
+}
+
+.collapsible-wrapper.is-expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapsible-inner {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+ 
+
+}
+
+/* Stretch and Squash Animation */
+.header-squash {
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes squash-stretch {
+  0% { transform: scale(1, 1); }
+  25% { transform: scale(1.1, 0.85); }
+  50% { transform: scale(0.9, 1.15); }
+  75% { transform: scale(1.05, 0.95); }
+  100% { transform: scale(1, 1); }
+}
+
+.is-expanded + .toggle-btn {
+  animation: squash-stretch 0.6s ease;
+}
+
+.secondary-btn {
+  transform: scale(0.8);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+.is-expanded .secondary-btn {
+  transform: scale(1);
+  opacity: 1;
 }
 .nest-notif-btn {
   width: 44px;
@@ -2773,7 +2949,7 @@ const handleNotifClick = (notif: any) => {
 }
 
 .gold-glow {
-    box-shadow: 0 0 20px rgba(255, 191, 0, 0.4);
+    border: 1.5px solid rgba(255, 191, 0, 0.4);
 }
 
 .hex-glow {
@@ -3771,5 +3947,26 @@ const handleNotifClick = (notif: any) => {
   background: transparent !important;
   opacity: 0;
   pointer-events: none;
+}
+
+/* Garden Management Styles */
+.garden-manage-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+}
+
+.garden-toggle {
+  margin-left: 10px;
+  --handle-background: #ffd700;
+  --handle-background-checked: #fff;
+  --background-checked: #ffd700;
+}
+
+.hidden-status {
+  color: #ff4757 !important;
+  font-weight: 600;
 }
 </style>
