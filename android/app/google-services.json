@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "119747383801",
+    "firebase_url": "https://notibee-441b2-default-rtdb.firebaseio.com",
+    "project_id": "notibee-441b2",
+    "storage_bucket": "notibee-441b2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:119747383801:android:64d8cff0288ad28bdaad28",
+        "android_client_info": {
+          "package_name": "com.cypherstudio.notibee"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "119747383801-2vs9vbmjdoueurn6qbh6f12266a9rm6k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBIUIq5EW5kwIyz856M4p_7t0IEckSe6Hw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "119747383801-2vs9vbmjdoueurn6qbh6f12266a9rm6k.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

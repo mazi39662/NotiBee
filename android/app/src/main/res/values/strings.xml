@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">NotiBee</string>
+    <string name="title_activity_main">NotiBee</string>
+    <string name="package_name">com.cypherstudio.notibee</string>
+    <string name="custom_url_scheme">com.cypherstudio.notibee</string>
+</resources>

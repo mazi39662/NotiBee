@@ -1,0 +1,7 @@
+{
+  "name": "NotiBee",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
