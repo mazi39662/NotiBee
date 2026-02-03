@@ -102,7 +102,7 @@
             </ion-buttons>
           </div>
 
-          <div class="drawer-content" @touchmove.stop>
+          <div class="drawer-content">
             <!-- Room Stories Area inside Drawer -->
             <div class="stories-well-drawer glass-panel">
               <div class="story-item placeholder" @click="postStory">
@@ -142,8 +142,8 @@
               ref="chatScrollRef"
               @touchstart="handleChatTouchStart"
               @touchmove="handleChatTouchMove"
-              data-ion-no-swipe
             >
+              <div class="chat-spacer"></div>
               <div v-if="currentRoomBuzzes.length === 0" class="empty-chat-v2">
                 <div class="empty-icon-v2">📢</div>
                 <p>Quiet hive... Start the swarm!</p>
@@ -167,8 +167,15 @@
                   {{ buzz.sender }}
                 </div>
                 <div class="buzz-content-v2" :class="{ 'has-media': buzz.image || buzz.audioUrl }" @click="handleBuzzClick(buzz, $event)">
-                  <img v-if="buzz.image" :src="buzz.image" class="buzz-img-v2" @click.stop="viewFullImage(buzz.image)" />
-                  <AudioBubble v-if="buzz.audioUrl" :src="buzz.audioUrl" :duration="buzz.duration || 0" :msgId="buzz.id" :is-own="buzz.sender === userBeeId" />
+                  <img v-if="buzz.image" :src="buzz.image" class="buzz-img-v2" @click.stop="viewFullImage(buzz.image)" @load="scrollToBottom(0)" />
+                  <AudioBubble 
+                    v-if="buzz.audioUrl" 
+                    :src="buzz.audioUrl" 
+                    :duration="buzz.duration || 0" 
+                    :msgId="buzz.id" 
+                    :is-own="buzz.sender === userBeeId" 
+                    :customization="getMemberCustomization(buzz.sender)"
+                  />
                   <p v-else-if="buzz.message">{{ buzz.message }}</p>
                   
                   <div class="buzz-meta-v2">
@@ -423,7 +430,7 @@
 import { 
   IonPage, IonHeader, IonToolbar, IonTitle, IonContent, 
   IonButtons, IonBackButton, IonIcon, IonButton, IonFooter,
-  IonTextarea, IonModal, IonList, IonItem, IonLabel, IonBadge,
+  IonTextarea, IonModal, IonList, IonItem, IonLabel, IonBadge, IonSpinner,
   alertController, actionSheetController, toastController, IonInput,
   IonPopover
 } from '@ionic/vue';
@@ -875,13 +882,30 @@ watch(currentRoomBuzzes, (newBuzzes) => {
   }
 });
 
-const scrollToBottom = () => {
-  if (chatScrollRef.value) {
-    chatScrollRef.value.scrollTop = chatScrollRef.value.scrollHeight;
-    // Fallback search for anchor if scrollHeight is tricky
-    const anchor = document.querySelector('.scroll-bottom-anchor');
-    if (anchor) anchor.scrollIntoView({ behavior: 'smooth' });
-  }
+const scrollToBottom = async (duration = 300) => {
+  await nextTick();
+  await nextTick();
+  
+  const effort = () => {
+    if (chatScrollRef.value) {
+      const el = chatScrollRef.value;
+      el.scrollTop = el.scrollHeight;
+      
+      // Fallback search for anchor if scrollHeight is tricky
+      const anchor = el.querySelector('.scroll-bottom-anchor');
+      if (anchor) {
+        anchor.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    }
+  };
+
+  // 1. Initial attempt
+  effort();
+  
+  // 2. Persistent retries for modal/rendering delay
+  [50, 150, 300, 500, 800, 1200].forEach(delay => {
+    setTimeout(effort, delay);
+  });
 };
 
 const handleBreakpointChange = (ev: any) => {
@@ -922,7 +946,6 @@ const handleChatTouchMove = (e: TouchEvent) => {
   const canScrollUp = scrollTop > 1;
   
   if ((isScrollingDown && canScrollDown) || (isScrollingUp && canScrollUp)) {
-    // Stop the event from reaching the modal's gesture handler
     e.stopPropagation();
   }
 };
@@ -1641,7 +1664,10 @@ const handleRemoveMember = async (memberId: string) => {
     /* Prevent modal swipe-to-close from interfering with scrolling */
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
+}
+
+.chat-spacer {
+  flex: 1 1 auto;
 }
 
 .buzz-bubble-v2 {

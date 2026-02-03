@@ -344,7 +344,8 @@
       <ion-modal 
         ref="buzzModal"
         :is-open="isModalOpen" 
-        @didDismiss="isModalOpen = false" 
+        @didDismiss="isModalOpen = false; isViewingHistory = false" 
+        @didPresent="isViewingHistory ? scrollToBottom(0) : null"
         :initial-breakpoint="activeTab === 'messages' ? 1 : 0.85" 
         :breakpoints="activeTab === 'messages' ? [0, 1] : [0, 0.85, 1]"
         class="buzz-modal"
@@ -511,9 +512,16 @@
                       >
                         <div class="msg-bubble" :class="{ 'has-media': b.image || b.audioUrl }" @click="handleMessageClick(b)">
                           <div v-if="b.image" class="msg-image-wrapper">
-                              <img :src="b.image" class="msg-image" @click.stop="viewFullImage(b.image)" />
+                              <img :src="b.image" class="msg-image" @click.stop="viewFullImage(b.image)" @load="scrollToBottom(0)" />
                           </div>
-                          <AudioBubble v-if="b.audioUrl" :src="b.audioUrl" :duration="b.duration || 0" :msgId="b.id" :is-own="b.sender === userBeeId" />
+                          <AudioBubble 
+                            v-if="b.audioUrl" 
+                            :src="b.audioUrl" 
+                            :duration="b.duration || 0" 
+                            :msgId="b.id" 
+                            :is-own="b.sender === userBeeId" 
+                            :customization="b.sender === userBeeId ? myCustomization : selectedBee?.customization"
+                          />
                           <p v-else-if="b.message">{{ b.message }}</p>
                           <span class="msg-time">
                             {{ new Date(b.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
@@ -1183,6 +1191,11 @@ const isOnline = (lastSeen?: string) => {
     return (now - lastActive) < 1000 * 60 * 1; // Online if seen in last 1 min
 };
 
+const myCustomization = computed(() => {
+    const stored = localStorage.getItem('bee_customization');
+    if (stored) return JSON.parse(stored);
+    return { top: 'none', body: 'none', eyes: 'none' };
+});
 const dynamicBeeScale = computed(() => {
   const count = beeStates.value.length || 1;
   if (count <= 3) return 1.5; // Large for small crowds
@@ -1323,19 +1336,44 @@ watch([colonyBeesData, myBeeData, userBeeId], ([colonyData, me, myId]) => {
 }, { immediate: true, deep: true });
 
 const scrollToBottom = async (duration = 300) => {
+    // Wait for initial ticks
     await nextTick();
-    if (historyContentRef.value) {
-        const content = historyContentRef.value;
-        if (content.$el) {
-            // Some versions of Ionic Vue require accessing $el
-            content.scrollToBottom(duration);
-        } else if (content.scrollToBottom) {
-            content.scrollToBottom(duration);
+    await nextTick();
+    
+    const effort = async (d: number) => {
+        if (historyContentRef.value) {
+            const content = historyContentRef.value;
+            try {
+                // Best way: use Ionic's built-in scrollToBottom
+                if (typeof content.scrollToBottom === 'function') {
+                    await content.scrollToBottom(d);
+                } else if (typeof content.scrollToPoint === 'function') {
+                    // Fallback to scrollToPoint with a relative huge Y to force bottom
+                    await content.scrollToPoint(0, 999999, d);
+                } else if (content.$el && typeof content.$el.scrollToBottom === 'function') {
+                    await content.$el.scrollToBottom(d);
+                }
+                
+                // Direct DOM manipulation as last resort
+                const el = await content.getScrollElement();
+                if (el) {
+                    el.scrollTop = el.scrollHeight;
+                }
+            } catch (err) {
+                // Silence errors during transition
+            }
         }
-    } else if (historyList.value) {
-        // Fallback for native div
-        historyList.value.scrollTop = historyList.value.scrollHeight;
-    }
+    };
+
+    // 1. Initial attempt
+    await effort(duration);
+    
+    // 2. Persistent retries for modal/rendering delay
+    // Multiple intervals ensure we catch the height change when images/messages render
+    // Transitions can take up to 400ms, and image loads even longer
+    [50, 150, 300, 500, 800, 1200].forEach(delay => {
+        setTimeout(() => effort(delay < 400 ? 0 : duration), delay);
+    });
 };
 
 // Watch for history view opening to scroll
@@ -1414,7 +1452,15 @@ watch(buzzes, (newBuzzes) => {
 
 let statusTimer: any = null;
 
-onMounted(() => {
+onMounted(async () => {
+  // Sync my bee profile for the talking bee feature
+  if (userBeeId.value) {
+      const profile = await useUserService().getUserProfile(userBeeId.value);
+      if (profile?.customization) {
+          localStorage.setItem('bee_customization', JSON.stringify(profile.customization));
+      }
+  }
+
   animationTimer = setInterval(animateBees, 4000);
   
   // Give a longer delay for the first random move to ensure 
@@ -1482,6 +1528,8 @@ const openBuzzModal = (bee: any, wantHistory = false) => {
             const targetBreakpoint = activeTab.value === 'messages' ? 1 : 1; // Both are 1 but kept for clarity if logic changes
             buzzModal.value.$el.setCurrentBreakpoint(targetBreakpoint);
         }
+        // Additional delayed scroll for safety when opening history
+        setTimeout(() => scrollToBottom(0), 400);
     });
   }
 
@@ -1786,6 +1834,9 @@ const handleSendBuzz = async () => {
         }
         
         Haptics.impact({ style: ImpactStyle.Light });
+        if (isViewingHistory.value) {
+            scrollToBottom();
+        }
     } catch (e: any) {
         console.error('Buzz failed', e);
     }
@@ -2616,6 +2667,7 @@ const handleNotifClick = (notif: any) => {
     padding: 10px 20px;
     display: flex;
     flex-direction: column;
+    min-height: 100%;
     --background: transparent;
 }
 
@@ -2994,11 +3046,14 @@ const handleNotifClick = (notif: any) => {
     display: flex;
     flex-direction: column;
     background: transparent;
+    min-height: 100%;
 }
 
 .history-list {
     display: flex;
     flex-direction: column;
+    justify-content: flex-end;
+    flex: 1;
     gap: 12px;
     margin-top: 10px;
     padding-bottom: 20px;
