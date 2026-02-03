@@ -922,7 +922,7 @@ ion-toolbar {
 }
 
 .colony-container {
-  padding: max(10px, env(safe-area-inset-top) + 20px) 20px 20px;
+  padding: max(10px, env(safe-area-inset-top) + 20px) clamp(12px, 4vw, 20px) 20px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -989,8 +989,8 @@ ion-toolbar {
 }
 
 .profile-bee-stage-settings {
-  width: 160px;
-  height: 160px;
+  width: clamp(120px, 40vw, 180px);
+  height: clamp(120px, 40vw, 180px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1027,7 +1027,7 @@ ion-toolbar {
 
 .profile-meta h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: clamp(1.4rem, 6vw, 1.8rem);
   font-weight: 800;
 }
 
@@ -1163,7 +1163,7 @@ ion-toolbar {
 }
 
 .btn-text .label {
-  font-size: 16px;
+  font-size: clamp(0.95rem, 4.5vw, 1.1rem);
   font-weight: 800;
   color: white;
 }
@@ -1284,7 +1284,7 @@ ion-toolbar {
 }
 
 .modal-header-desc h2 {
-    font-size: 24px;
+    font-size: clamp(1.4rem, 6vw, 2rem);
     font-weight: 900;
     margin: 0;
 }
@@ -1324,7 +1324,7 @@ ion-toolbar {
 }
 
 .qr-container {
-    padding: 20px;
+    padding: clamp(16px, 5vw, 30px);
     border-radius: 24px;
     margin: 20px 0;
     display: flex;
@@ -1452,7 +1452,7 @@ ion-toolbar {
 
 .setting-item h3 {
   font-weight: 700;
-  font-size: 16px;
+  font-size: clamp(0.95rem, 4vw, 1.1rem);
   margin: 0;
 }
 

@@ -287,7 +287,7 @@ const formatTime = (timestamp: number) => {
 
 <style scoped>
 .rooms-container {
-  padding: 16px;
+  padding: clamp(12px, 4vw, 20px);
   max-width: 600px;
   margin: 0 auto;
 }
@@ -308,7 +308,7 @@ const formatTime = (timestamp: number) => {
   justify-content: center;
   min-height: 70vh;
   text-align: center;
-  padding: 20px;
+  padding: clamp(20px, 10vw, 40px);
 }
 
 .empty-hive-visual {
@@ -342,7 +342,7 @@ const formatTime = (timestamp: number) => {
 
 .premium-title {
   font-weight: 900;
-  font-size: 28px;
+  font-size: clamp(1.4rem, 7vw, 2rem);
   margin-bottom: 12px;
   background: linear-gradient(to bottom, #ffffff 0%, #aaaaaa 100%);
   -webkit-background-clip: text;
@@ -437,7 +437,7 @@ const formatTime = (timestamp: number) => {
 
 .room-name {
   margin: 0;
-  font-size: 17px;
+  font-size: clamp(0.95rem, 4.5vw, 1.1rem);
   font-weight: 800;
   color: var(--ion-text-color);
   padding-right: 5px;
@@ -498,7 +498,7 @@ const formatTime = (timestamp: number) => {
 .modal-header h2 {
   margin: 0;
   font-weight: 900;
-  font-size: 28px;
+  font-size: clamp(1.4rem, 6vw, 2rem);
   background: linear-gradient(to right, #ffbf00, #ff8c00);
   -webkit-background-clip: text;
   background-clip: text;
@@ -664,12 +664,12 @@ ion-checkbox {
 
 .buzz-send-btn {
   width: 100%;
-  height: 64px;
+  height: clamp(56px, 12vw, 68px);
   background: #ffbf00;
   border: none;
   border-radius: 20px;
   font-weight: 900;
-  font-size: 16px;
+  font-size: clamp(0.9rem, 3.5vw, 1.1rem);
   color: #000;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -770,7 +770,7 @@ ion-content {
 
 .colony-hub-header h1 {
     margin: 0;
-    font-size: 32px;
+    font-size: clamp(1.6rem, 8vw, 2.4rem);
     font-weight: 900;
     color: white;
     letter-spacing: -1px;

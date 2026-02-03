@@ -74,7 +74,7 @@
           </div>
 
           <div class="choice-actions">
-            <ion-button expand="block" color="primary" :disabled="!agreedToTerms" @click="goToCreate" class="action-btn gold-glow">
+            <ion-button expand="block" color="primary" :disabled="!agreedToTerms" @click="goToCreate" class="action-btn">
               CREATE NEW IDENTITY
               <ion-icon :icon="addCircleOutline" slot="end"></ion-icon>
             </ion-button>
@@ -91,7 +91,7 @@
           <div class="step-dots">
             <div v-for="i in 3" :key="i" :class="['dot', { active: step === i }]"></div>
           </div>
-          <ion-button expand="block" color="primary" @click="nextStep" class="next-btn gold-glow">
+          <ion-button expand="block" color="primary" @click="nextStep" class="next-btn">
             {{ step === 3 ? 'CONTINUE' : 'NEXT' }}
             <ion-icon :icon="arrowForward" slot="end"></ion-icon>
           </ion-button>
@@ -162,10 +162,12 @@ const goToLogin = () => {
 }
 
 .onboarding-wrapper {
-  padding: 60px 24px 40px;
+  padding: clamp(40px, 10vh, 80px) 24px 40px;
   height: 100%;
   display: flex;
   flex-direction: column;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .step-container {
@@ -214,28 +216,29 @@ const goToLogin = () => {
 }
 
 h1 {
-  font-size: 28px;
+  font-size: clamp(1.5rem, 7vw, 2.2rem);
   font-weight: 800;
   margin-bottom: 12px;
 }
 
 p {
   color: #888;
-  font-size: 15px;
+  font-size: clamp(0.9rem, 4vw, 1.1rem);
   line-height: 1.5;
-  max-width: 280px;
+  max-width: 320px;
   margin: 0 auto;
 }
 
 /* Visualization Styles */
 .step-image, .step-features, .radar-preview {
   width: 100%;
-  height: 200px;
+  height: clamp(160px, 30vh, 240px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
+  margin: 20px 0;
 }
 
 .illustration {
@@ -318,9 +321,9 @@ p {
 
 .action-btn {
   --border-radius: 16px;
-  height: 56px;
+  height: clamp(50px, 12vw, 64px);
   font-weight: 800;
-  font-size: 14px;
+  font-size: clamp(0.8rem, 3.5vw, 1rem);
 }
 
 .divider {

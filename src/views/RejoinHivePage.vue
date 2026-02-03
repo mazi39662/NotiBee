@@ -120,11 +120,13 @@ const handleRejoin = async () => {
 }
 
 .rejoin-wrapper {
-  padding: 60px 24px;
+  padding: clamp(40px, 8vh, 80px) 24px;
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  gap: 40px;
+  gap: clamp(20px, 5vh, 40px);
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .header-section {
@@ -154,22 +156,22 @@ const handleRejoin = async () => {
 }
 
 h1 {
-  font-size: 28px;
+  font-size: clamp(1.5rem, 6vw, 2.2rem);
   font-weight: 800;
   margin-bottom: 12px;
 }
 
 p {
   color: #777;
-  font-size: 15px;
+  font-size: clamp(0.9rem, 4vw, 1rem);
   line-height: 1.5;
 }
 
 .pro-input-container {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 24px;
-  padding: 24px;
+  padding: clamp(16px, 5vw, 24px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -188,7 +190,7 @@ p {
 
 .pro-input {
   --color: #fff;
-  font-size: 32px;
+  font-size: clamp(1.5rem, 8vw, 2.5rem);
   font-weight: 800;
   text-align: center;
 }
@@ -224,9 +226,9 @@ p {
 
 .rejoin-btn {
   --border-radius: 20px;
-  height: 68px;
+  height: clamp(56px, 12vw, 72px);
   font-weight: 900;
-  font-size: 18px;
+  font-size: clamp(1rem, 4vw, 1.2rem);
   margin-top: 24px;
   box-shadow: 0 8px 25px rgba(255, 191, 0, 0.2);
 }

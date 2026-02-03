@@ -48,8 +48,9 @@ const playHaptic = () => {
   backdrop-filter: blur(15px);
   -webkit-backdrop-filter: blur(15px);
   border-top: 1px solid var(--tab-bar-border);
-  height: 70px;
-  border-radius: 50px 50px 0 0;
+  height: clamp(60px, 12vh, 75px);
+  border-radius: 30px 30px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 ion-tab-button {
@@ -73,6 +74,7 @@ ion-tab-button ion-label {
   transition: transform 0.3s ease, opacity 0.3s ease;
   font-weight: 600;
   letter-spacing: 0.3px;
+  font-size: clamp(9px, 2.5vw, 11px);
 }
 
 ion-tab-button.tab-selected ion-label {
@@ -94,7 +96,7 @@ ion-tab-button.tab-selected ion-label {
 }
 
 ion-icon {
-  font-size: 24px;
+  font-size: clamp(20px, 6vw, 26px);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

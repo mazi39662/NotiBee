@@ -1519,13 +1519,22 @@ const getRelativeTime = (timestamp: number): string => {
 .header-honey-jar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   background: rgba(255, 191, 0, 0.1);
-  padding: 4px 12px;
+  padding: 4px 10px;
   border-radius: 20px;
   border: 1px solid rgba(255, 191, 0, 0.2);
-  margin-right: 10px;
+  margin-right: 8px;
   cursor: pointer;
+  flex-shrink: 0;
+}
+
+@media (max-width: 360px) {
+  .header-honey-jar {
+    gap: 4px;
+    padding: 3px 8px;
+    margin-right: 4px;
+  }
 }
 
 .jar-icon-wrapper {
@@ -1584,12 +1593,18 @@ const getRelativeTime = (timestamp: number): string => {
 }
 
 .days-container {
-  padding: max(20px, env(safe-area-inset-top) + 20px) 20px 20px;
+  width: 100%;
   max-width: 600px;
   margin: 0 auto;
-  padding-top: 0;
+  padding: 0 16px 24px;
   position: relative;
   z-index: 1;
+}
+
+@media (max-width: 360px) {
+  .days-container {
+    padding: 0 12px 16px;
+  }
 }
 
 h3 {
@@ -1781,7 +1796,7 @@ h3 {
 /* Empty & Loading States */
 .empty-state, .loading-state {
   text-align: center;
-  padding: 60px 20px;
+  padding: clamp(30px, 10vw, 60px) 20px;
 }
 
 .empty-icon {
@@ -1821,12 +1836,12 @@ h3 {
 
 .progress-bars {
   position: absolute;
-  top: env(safe-area-inset-top);
+  top: max(8px, env(safe-area-inset-top));
   left: 0;
   right: 0;
   display: flex;
   gap: 4px;
-  padding: 8px;
+  padding: 8px 12px;
   z-index: 100;
 }
 
@@ -1861,7 +1876,7 @@ h3 {
 
 .story-header {
   position: absolute;
-  top: calc(20px + env(safe-area-inset-top));
+  top: calc(30px + env(safe-area-inset-top));
   left: 0;
   right: 0;
   display: flex;
@@ -1922,26 +1937,41 @@ h3 {
 
 .story-caption {
   position: absolute;
-  bottom: 100px;
-  left: 20px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.6);
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  left: 16px;
+  right: 70px;
+  background: rgba(0, 0, 0, 0.5);
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: 16px;
   color: white;
-  font-size: 14px;
+  font-size: clamp(0.85rem, 3.5vw, 0.95rem);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+@media (max-width: 360px) {
+  .story-caption {
+    left: 12px;
+    bottom: calc(30px + env(safe-area-inset-bottom));
+  }
 }
 
 .story-actions {
   position: absolute;
-  bottom: 100px;
-  right: 16px;
+  bottom: calc(40px + env(safe-area-inset-bottom));
+  right: 12px;
   z-index: 100;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
   align-items: center;
+}
+
+@media (max-width: 360px) {
+  .story-actions {
+    gap: 12px;
+  }
 }
 
 .like-section, .comment-section {
@@ -2001,10 +2031,16 @@ h3 {
 .card-carousel-wrapper {
   position: relative;
   width: 100%;
-  min-height: 200px;
-  max-height: 500px;
+  min-height: 250px;
+  aspect-ratio: 4/5;
   overflow: hidden;
   background: #000;
+}
+
+@media (max-width: 480px) {
+  .card-carousel-wrapper {
+    aspect-ratio: 1/1;
+  }
 }
 
 .carousel-container {
@@ -2085,12 +2121,20 @@ ion-toolbar {
 
 /* What's on your mind? Styles */
 .mind-box {
-  margin-bottom: 24px;
-  padding: 16px;
+  margin-top: 16px;
+  margin-bottom: 20px;
+  padding: 12px;
   background: var(--glass-bg);
   border-radius: 20px;
   border: 1px solid var(--glass-border);
   box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 360px) {
+  .mind-box {
+    padding: 8px;
+    border-radius: 16px;
+  }
 }
 
 .mind-top {
@@ -2135,7 +2179,8 @@ ion-toolbar {
 
 .mind-actions {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .mind-action {
@@ -2191,8 +2236,8 @@ ion-toolbar {
 
 .batch-preview-item {
   flex-shrink: 0;
-  width: 140px;
-  height: 240px;
+  width: clamp(100px, 35vw, 140px);
+  height: clamp(180px, 50vw, 240px);
   position: relative;
 }
 
@@ -2243,11 +2288,18 @@ ion-toolbar {
   background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-radius: 20px;
+  border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%;
+}
+
+@media (max-width: 480px) {
+  .nectar-card {
+    border-radius: 20px;
+  }
 }
 
 .nectar-card:active {
@@ -2281,7 +2333,7 @@ ion-toolbar {
 
 .card-user-info h4 {
   margin: 0;
-  font-size: 15px;
+  font-size: clamp(0.9rem, 4vw, 1rem);
   font-weight: 700;
   color: var(--ion-text-color);
 }
@@ -2337,11 +2389,18 @@ ion-toolbar {
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 20px 16px 12px;
-  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  padding: 24px 16px 12px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.85));
   color: white;
-  font-size: 14px;
+  font-size: clamp(0.85rem, 3.5vw, 0.95rem);
   line-height: 1.4;
+  word-break: break-word;
+}
+
+@media (max-width: 360px) {
+  .card-caption {
+    padding: 16px 12px 10px;
+  }
 }
 
 .card-text-story {
@@ -2354,7 +2413,7 @@ ion-toolbar {
 }
 
 .card-text-story p {
-  font-size: 22px;
+  font-size: clamp(1.2rem, 6vw, 1.5rem);
   font-weight: 700;
   line-height: 1.4;
   color: white;
@@ -2432,7 +2491,7 @@ ion-toolbar {
 
 .modal-header h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: clamp(1.2rem, 5vw, 1.5rem);
   font-weight: 700;
 }
 
@@ -2621,7 +2680,7 @@ ion-toolbar {
 
 .comment-text {
   margin: 0;
-  font-size: 14px;
+  font-size: clamp(0.85rem, 3.5vw, 0.95rem);
   line-height: 1.4;
   color: var(--ion-text-color);
 }

@@ -1914,8 +1914,10 @@ const handleNotifClick = (notif: any) => {
 
 /* Messages Tab Styles */
 .messages-tab-container {
-  padding: 0 20px 100px;
+  padding: 0 clamp(12px, 4vw, 20px) 100px;
   min-height: 100%;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .messages-header {
@@ -2010,7 +2012,7 @@ const handleNotifClick = (notif: any) => {
 
 .convo-name {
   font-weight: 800;
-  font-size: 16px;
+  font-size: clamp(0.95rem, 4.5vw, 1.1rem);
   color: white;
 }
 
@@ -2027,7 +2029,7 @@ const handleNotifClick = (notif: any) => {
 
 .last-msg {
   margin: 0;
-  font-size: 13px;
+  font-size: clamp(0.8rem, 3.5vw, 0.9rem);
   color: #888;
   white-space: nowrap;
   overflow: hidden;
@@ -2051,7 +2053,7 @@ const handleNotifClick = (notif: any) => {
 
 .empty-messages-state {
   text-align: center;
-  padding: 80px 20px;
+  padding: clamp(40px, 15vh, 80px) 20px;
 }
 
 .empty-messages-state h3 {
@@ -2088,11 +2090,11 @@ const handleNotifClick = (notif: any) => {
 
 .hive-header {
   position: absolute;
-  top: calc(env(safe-area-inset-top, 0px) + 85px);
+  top: calc(env(safe-area-inset-top, 0px) + clamp(70px, 15vw, 90px));
   left: 0;
   right: 0;
   z-index: 100;
-  padding: 0 16px;
+  padding: 0 clamp(12px, 4vw, 16px);
   display: flex;
   justify-content: flex-end; /* Align buttons to the right */
   align-items: center;
@@ -2508,7 +2510,7 @@ const handleNotifClick = (notif: any) => {
   --color: rgba(255, 255, 255, 0.5);
   --color-checked: #1a1a2e;
   font-weight: 800;
-  font-size: 11px;
+  font-size: clamp(10px, 3vw, 12px);
   letter-spacing: 1px;
   min-height: 36px;
 }
@@ -2583,7 +2585,7 @@ const handleNotifClick = (notif: any) => {
 .modal-header h2 {
   margin: 0;
   font-weight: 800;
-  font-size: 24px;
+  font-size: clamp(1.2rem, 5vw, 1.6rem);
   color: var(--ion-text-color);
 }
 

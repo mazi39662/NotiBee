@@ -1304,8 +1304,8 @@ const handleRemoveMember = async (memberId: string) => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -60%);
-  width: 250px;
-  height: 250px;
+  width: clamp(180px, 50vw, 250px);
+  height: clamp(180px, 50vw, 250px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1528,7 +1528,7 @@ const handleRemoveMember = async (memberId: string) => {
 
 .drawer-info h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: clamp(1rem, 5vw, 1.2rem);
   font-weight: 900;
   color: #ffbf00;
 }
@@ -1706,7 +1706,7 @@ const handleRemoveMember = async (memberId: string) => {
 
 .buzz-content-v2 p {
     margin: 0;
-    font-size: 15px;
+    font-size: clamp(0.85rem, 4vw, 0.95rem);
     line-height: 1.4;
     color: #efefef;
 }

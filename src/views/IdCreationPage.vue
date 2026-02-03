@@ -179,11 +179,13 @@ const handleCreate = async () => {
 }
 
 .creation-wrapper {
-  padding: 60px 24px;
+  padding: clamp(40px, 8vh, 80px) 24px;
   display: flex;
   flex-direction: column;
   min-height: 100%;
-  gap: 40px;
+  gap: clamp(20px, 5vh, 40px);
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .header-section {
@@ -213,7 +215,7 @@ const handleCreate = async () => {
 }
 
 h1 {
-  font-size: 28px;
+  font-size: clamp(1.5rem, 6vw, 2.2rem);
   font-weight: 800;
   color: var(--ion-text-color);
   margin-bottom: 12px;
@@ -221,7 +223,7 @@ h1 {
 
 p {
   color: #777;
-  font-size: 15px;
+  font-size: clamp(0.9rem, 4vw, 1rem);
   line-height: 1.5;
 }
 
@@ -229,7 +231,7 @@ p {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   border-radius: 24px;
-  padding: 24px;
+  padding: clamp(16px, 5vw, 24px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -251,7 +253,7 @@ p {
   --color: var(--ion-text-color);
   --placeholder-color: var(--ion-color-medium);
   --placeholder-opacity: 1;
-  font-size: 32px;
+  font-size: clamp(1.5rem, 8vw, 2.5rem);
   font-weight: 800;
   text-align: center;
   width: 100%;
@@ -309,9 +311,9 @@ p {
   --border-radius: 20px;
   --background: var(--ion-color-primary);
   --color: black;
-  height: 68px;
+  height: clamp(56px, 12vw, 72px);
   font-weight: 900;
-  font-size: 18px;
+  font-size: clamp(1rem, 4vw, 1.2rem);
   margin-top: 10px;
   box-shadow: 0 8px 25px rgba(255, 191, 0, 0.2);
 }
