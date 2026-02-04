@@ -158,7 +158,6 @@ export const useBuzzService = () => {
       snapshot.docChanges().forEach(async (change) => {
         if (change.type === 'added') {
           const data = change.doc.data();
-          console.log('📬 New buzz arrived!', data);
 
           // If the message is from ourselves, skip processing it as a "received" message
           // because sendBuzz already added it to our local "sent" history.
@@ -219,7 +218,6 @@ export const useBuzzService = () => {
   };
 
   const sendBuzz = async (recipientId: string, message: string, senderId: string, recipientToken: string, image?: string) => {
-    console.log(`🚀 Sending buzz to ${recipientId} from ${senderId}...`);
     const sharedId = 'buzz_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
 
     // Add to local history immediately for UX
@@ -239,7 +237,6 @@ export const useBuzzService = () => {
 
       // 2. Write to DISPATCH collection for Background Push (FCM)
       if (recipientToken) {
-        console.log(`📡 Queuing background dispatch for ${recipientId}...`);
         const dispatchRef = collection(db, 'dispatch');
         await addDoc(dispatchRef, {
           to: recipientToken,
@@ -275,7 +272,6 @@ export const useBuzzService = () => {
   };
 
   const sendAudioBuzz = async (recipientId: string, audioUrl: string, duration: number, senderId: string, recipientToken: string) => {
-    console.log(`🎙️ Sending audio buzz to ${recipientId} from ${senderId}...`);
     const sharedId = 'audio_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
     const { deleteFromStorage } = useAudioService();
 
@@ -432,7 +428,6 @@ export const useBuzzService = () => {
   const processOutbox = async () => {
     if (outbox.value.length === 0) return;
 
-    console.log(`📦 Processing outbox (${outbox.value.length} items)...`);
     const items = [...outbox.value];
     outbox.value = [];
     localStorage.setItem(OUTBOX_KEY, '[]');

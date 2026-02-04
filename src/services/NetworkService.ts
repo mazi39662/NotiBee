@@ -10,7 +10,6 @@ Network.getStatus().then(status => {
 
 // Listen for network changes
 Network.addListener('networkStatusChange', status => {
-    console.log('🌐 Network status changed:', status.connected ? 'Online' : 'Offline');
     isOnline.value = status.connected;
 });
 

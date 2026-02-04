@@ -48,7 +48,6 @@ export function useAdService() {
         try {
             await AdMob.initialize();
             isAdMobInitialized.value = true;
-            console.log('AdMob Initialized');
 
             // Show banner immediately after initialization
             showBanner();
@@ -119,7 +118,6 @@ export function useAdService() {
     };
 
     const trackAdClick = async (adId: string) => {
-        console.log(`Ad ${adId} clicked!`);
         try {
             const statsRef = doc(db, 'ad_stats', adId);
             await updateDoc(statsRef, {
@@ -133,7 +131,6 @@ export function useAdService() {
     };
 
     const trackAdView = async (adId: string) => {
-        console.log(`Ad ${adId} viewed!`);
         try {
             const statsRef = doc(db, 'ad_stats', adId);
             await updateDoc(statsRef, {

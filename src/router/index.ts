@@ -82,8 +82,12 @@ const routes: Array<RouteRecordRaw> = [
   {
     path: '/rejoin-hive',
     component: () => import('@/views/RejoinHivePage.vue')
+  },
+  {
+    path: '/call',
+    component: () => import('@/views/CallPage.vue')
   }
-]
+];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

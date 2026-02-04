@@ -228,6 +228,18 @@
              <ion-icon :icon="checkmarkCircleOutline" slot="start"></ion-icon>
              FRIENDS
            </ion-button>
+           
+            <ion-button 
+              v-if="isFriend && userProfile?.isOnline"
+              expand="block" 
+              shape="round" 
+              color="secondary" 
+              class="call-btn-gold" 
+              @click="handleStartCall"
+            >
+              <ion-icon :icon="callOutline" slot="start"></ion-icon>
+              VOICE CALL
+            </ion-button>
         </div>
 
         <!-- Profile Visitors Section (Moved to Bottom) -->
@@ -287,6 +299,8 @@
                 <ion-icon :icon="closeOutline"></ion-icon>
               </ion-button>
             </div>
+
+
             
             <div v-if="selectedStory.caption" class="viewer-caption">
               {{ selectedStory.caption }}
@@ -424,9 +438,11 @@ import { useUserService } from '@/services/UserService';
 import { useStreakService } from '@/services/StreakService';
 import { useMyDaysService } from '@/services/MyDaysService';
 import { useHoneyService } from '@/services/HoneyService';
+import { useCallService } from '@/services/CallService';
 import BeeComposite from '@/components/BeeComposite.vue';
 import EditProfileModal from '@/components/EditProfileModal.vue';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { callOutline } from 'ionicons/icons';
 
 const route = useRoute();
 const router = useRouter();
@@ -437,6 +453,8 @@ const {
 const { getAllAchievements, getStreakWithFriend } = useStreakService();
 const { fetchUserStories } = useMyDaysService();
 const { honeyJars, consumeJar, isRevealed } = useHoneyService();
+const { startCall } = useCallService();
+
 
 const beeId = computed(() => route.params.beeId as string);
 const isMe = computed(() => beeId.value === userBeeId.value);
@@ -590,6 +608,16 @@ const buzzBee = () => {
   // Navigate back to Hive with this bee selected
   router.push({ path: '/tabs/tab1', query: { buzz: beeId.value } });
 };
+
+const handleStartCall = async () => {
+    try {
+        await startCall(beeId.value);
+        router.push('/call');
+    } catch (e) {
+        console.error('Call failed:', e);
+    }
+};
+
 
 const handleReportUser = async () => {
   const alert = await alertController.create({

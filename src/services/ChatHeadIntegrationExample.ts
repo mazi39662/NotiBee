@@ -167,7 +167,6 @@ export function setupChatHeadIntegration() {
         const service = useChatHeadService();
 
         if (!service.isSupported()) {
-            console.log('Chat heads only work on Android');
             return;
         }
 
@@ -186,9 +185,7 @@ export function setupChatHeadIntegration() {
                 3
             );
 
-            console.log('Chat head shown!');
         } else {
-            console.log('Permission denied');
         }
     }
 

@@ -7,6 +7,8 @@ import { useBuzzService } from './BuzzService';
 import { useNotificationService } from './NotificationService';
 import router from '@/router';
 import { App as CapApp } from '@capacitor/app';
+import { useCallService } from './CallService';
+
 
 export const deviceToken = ref<string | null>(null);
 export const isAppInForeground = ref<boolean>(true);
@@ -24,12 +26,10 @@ export const usePushService = () => {
         // Track app state for better notification handling
         CapApp.addListener('appStateChange', ({ isActive }) => {
             isAppInForeground.value = isActive;
-            console.log(`📱 App state: ${isActive ? 'Foreground' : 'Background'}`);
         });
 
         // 1. Request Push Permissions
         let pushPerms = await PushNotifications.checkPermissions();
-        console.log('Current Push permission status:', pushPerms.receive);
 
         if (pushPerms.receive === 'prompt') {
             pushPerms = await PushNotifications.requestPermissions();
@@ -61,16 +61,27 @@ export const usePushService = () => {
                 visibility: 1,
                 vibration: true
             });
-            console.log('✅ Notification channel "buzz_channel" created');
         }
 
+        // 3.5 Register Action Types for Calls
+        await LocalNotifications.registerActionTypes({
+            types: [
+                {
+                    id: 'CALL_ACTION',
+                    actions: [
+                        { id: 'answer', title: 'Answer Bee 🐝', foreground: true },
+                        { id: 'reject', title: 'Reject', foreground: false, destructive: true }
+                    ]
+                }
+            ]
+        });
+
+
         PushNotifications.addListener('registration', async (token) => {
-            console.log('✅ FCM TOKEN REGISTERED:', token.value);
             deviceToken.value = token.value;
 
             const { userBeeId, saveUserProfile } = useUserService();
             if (userBeeId.value) {
-                console.log('💾 Saving FCM token to Firestore for:', userBeeId.value);
                 await saveUserProfile(userBeeId.value, token.value);
             }
         });
@@ -82,7 +93,6 @@ export const usePushService = () => {
 
         // Handle incoming notifications while app is OPEN (foreground)
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
-            console.log('📬 Push received (foreground):', JSON.stringify(notification));
             // NOTE: We do NOT call sendLocalBuzz here because the inbox listener in App.vue
             // already handles this for all incoming messages (BUZZ, VIBRATE, ROOM_BUZZ, etc.)
             // to prevent double notifications.
@@ -96,7 +106,6 @@ export const usePushService = () => {
 
         // Handle notification click/action (when app is CLOSED or BACKGROUND)
         PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-            console.log('🔔 Push notification clicked (background/closed):', JSON.stringify(notification));
             const sender = notification.notification.data?.senderId || 'A Bee';
             const message = notification.notification.body || notification.notification.data?.message || 'Buzz! 🐝';
             const image = notification.notification.data?.image;
@@ -114,72 +123,122 @@ export const usePushService = () => {
             setTimeout(() => {
                 if (type === 'ROOM_BUZZ' && roomId) {
                     router.push(`/tabs/tab2/room/${roomId}`);
+                } else if (type === 'CALL_REQUEST') {
+                    router.push('/call');
                 } else {
                     router.push({ path: '/tabs/tab1', query: { openBee: sender } });
                 }
             }, 500);
+
         });
 
         // Handle local notification click
         LocalNotifications.addListener('localNotificationActionPerformed', (action) => {
-            console.log('🔔 Local notification clicked:', action);
             const extra = action.notification.extra;
             const sender = extra?.sender || action.notification.title?.replace('🐝 Buzz from ', '') || 'A Bee';
             const type = extra?.type;
             const roomId = extra?.roomId;
 
+            const { answerCall, rejectCall } = useCallService();
+
+            if (action.actionId === 'reject') {
+                rejectCall();
+                return;
+            }
+
+            if (action.actionId === 'answer') {
+                router.push('/call');
+                setTimeout(() => {
+                    answerCall();
+                }, 1000);
+                return;
+            }
+
             setTimeout(() => {
                 if (type === 'ROOM_BUZZ' && roomId) {
                     router.push(`/tabs/tab2/room/${roomId}`);
+                } else if (type === 'CALL_REQUEST') {
+                    router.push('/call');
                 } else {
                     router.push({ path: '/tabs/tab1', query: { openBee: sender } });
                 }
             }, 500);
+
         });
+
 
         // 4. Finally Register with FCM/APNS
         await PushNotifications.register();
-        console.log('📱 Push notification registration initiated');
     };
 
     const sendLocalBuzz = async (sender: string, message: string, image?: string, type?: string, roomId?: string) => {
         // Respect Notification Settings
         if (!shouldNotify(type as any || 'BUZZ')) {
-            console.log('🔇 Notification suppressed by user settings');
             return;
         }
 
         try {
             const notificationId = Math.floor(Math.random() * 100000);
-            const title = type === 'ROOM_BUZZ' ? `🐝 Hive Hub` : `🐝 Buzz from ${sender}`;
+            const isCall = type === 'CALL_REQUEST';
+
+            // If it's a call, we want a distinctive sound and high priority
+            const title = isCall
+                ? `📞 ${sender} is calling you!`
+                : (type === 'ROOM_BUZZ' ? `🐝 Hive Hub` : `🐝 Buzz from ${sender}`);
+
+            const body = isCall ? `Ringing... (Swipe to Respond)` : message;
 
             await LocalNotifications.schedule({
                 notifications: [
                     {
-                        title: title,
-                        body: message,
+                        title,
+                        body,
                         id: notificationId,
                         schedule: { at: new Date(Date.now() + 100) },
                         sound: 'buzz',
                         smallIcon: 'ic_stat_bee',
                         iconColor: '#ffbf00',
-                        actionTypeId: 'OPEN_BUZZ',
+                        actionTypeId: isCall ? 'CALL_ACTION' : 'OPEN_BUZZ',
                         channelId: 'buzz_channel',
                         extra: {
-                            sender: sender,
-                            message: message,
+                            sender,
+                            message,
                             image: image || '',
-                            type: type,
-                            roomId: roomId
+                            type,
+                            roomId
                         }
                     }
                 ]
             });
-            console.log(`✅ Local notification scheduled for ${sender}`);
+
         } catch (e) {
             console.error('❌ Local Notification Error:', e);
         }
     };
+
+    const sendMissedCallNotification = async (sender: string) => {
+        try {
+            const notificationId = Math.floor(Math.random() * 100000);
+            await LocalNotifications.schedule({
+                notifications: [
+                    {
+                        title: `🐝 Missed Buzz Call`,
+                        body: `You missed a buzz call from @${sender}`,
+                        id: notificationId,
+                        schedule: { at: new Date(Date.now() + 100) },
+                        sound: 'buzz',
+                        smallIcon: 'ic_stat_bee',
+                        iconColor: '#ff4757', // Red for missed
+                        channelId: 'buzz_channel',
+                        extra: { sender, type: 'MISSED_CALL' }
+                    }
+                ]
+            });
+        } catch (e) {
+            console.error('Error sending missed call Notification:', e);
+        }
+    };
+
 
     /**
      * Clear all delivered notifications (useful when user opens app)
@@ -188,7 +247,6 @@ export const usePushService = () => {
         try {
             await LocalNotifications.removeAllDeliveredNotifications();
             await PushNotifications.removeAllDeliveredNotifications();
-            console.log('🧹 All notifications cleared');
         } catch (e) {
             console.error('Error clearing notifications:', e);
         }
@@ -210,6 +268,7 @@ export const usePushService = () => {
     return {
         initPush,
         sendLocalBuzz,
+        sendMissedCallNotification,
         clearAllNotifications,
         getDeliveredNotificationsCount,
         deviceToken,

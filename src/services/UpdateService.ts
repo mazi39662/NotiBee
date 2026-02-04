@@ -5,7 +5,7 @@ import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 
 // Current App Version (Should match package.json but we use this as source of truth for UI)
-export const APP_VERSION = '2.0.3';
+export const APP_VERSION = '2.0.4';
 
 // Replace with your actual package ID when you have it on Play Store
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.notibee.app';
@@ -17,7 +17,6 @@ export const useUpdateService = () => {
         // if (Capacitor.getPlatform() === 'web') return;
 
         try {
-            console.log('🐝 Checking for honey updates...');
 
             // 1. Fetch latest version info from Firestore
             // Path: app_config/version
@@ -36,10 +35,8 @@ export const useUpdateService = () => {
 
             // 2. Compare versions
             if (isNewerVersion(latestVersion, APP_VERSION)) {
-                console.log(`🚀 New version available: ${latestVersion}`);
                 await showUpdateAlert(latestVersion, isForce, customMessage);
             } else {
-                console.log('✅ App is up to date.');
             }
         } catch (e) {
             console.error('❌ Update check failed:', e);

@@ -426,8 +426,8 @@
         :is-open="isModalOpen" 
         @didDismiss="isModalOpen = false; isViewingHistory = false" 
         @didPresent="isViewingHistory ? scrollToBottom(0) : null"
-        :initial-breakpoint="activeTab === 'messages' ? 1 : 0.85" 
-        :breakpoints="activeTab === 'messages' ? [0, 1] : [0, 0.85, 1]"
+        :initial-breakpoint="activeTab === 'messages' ? 1 : 1" 
+        :breakpoints="activeTab === 'messages' ? [0, 1] : [0, 1]"
         class="buzz-modal"
       >
         <div class="modal-wrapper">
@@ -467,8 +467,12 @@
                 </div>
               </div>
               <h2 @click="goToProfile(selectedBee?.beeId)" style="cursor: pointer; position: relative; z-index: 10; margin-bottom: 2px;">{{ selectedBee?.beeId }}</h2>
-              <div @click="goToProfile(selectedBee?.beeId)" class="view-profile-link">VIEW PROFILE</div>
+              <div class="header-links">
+                <div @click="goToProfile(selectedBee?.beeId)" class="view-profile-link">VIEW PROFILE</div>
+              </div>
+
             </template>
+
 
             <!-- Minimalist/Chat Header (History Mode) -->
             <template v-else>
@@ -488,8 +492,18 @@
                     {{ getOfflineDuration(selectedBee?.lastSeen) }}
                   </span>
                 </div>
+
+                <button 
+                  v-if="selectedBee?.isOnline"
+                  class="chat-header-call-btn gold-glow-mini" 
+                  @click="handleVoiceCall"
+                >
+                    <ion-icon :icon="callOutline"></ion-icon>
+                </button>
+
               </div>
             </template>
+
           </div>
           
           <!-- Scrollable Body Content -->
@@ -566,7 +580,14 @@
                         </button>
                       </div>
                     </div>
+                    <div class="voice-call-secondary-action animate-in" v-if="selectedBee?.isOnline && !isRecording">
+                      <button @click="handleVoiceCall" class="wide-call-btn">
+                        <ion-icon :icon="callOutline"></ion-icon>
+                        START VOICE CALL
+                      </button>
+                    </div>
                   </div>
+
               </div>
 
               <!-- Buzz History Section -->
@@ -740,8 +761,10 @@ import {
   chevronDown, trash, closeOutline, alertCircleOutline,
   timeOutline, chatbubbleOutline, cameraOutline, imageOutline, closeCircle,
   qrCodeOutline, locationOutline, scanOutline, trophyOutline, micOutline, notificationsOutline, personAddOutline,
-  checkmark, checkmarkDone, leafOutline, eyeOutline, eyeOffOutline, shieldOutline, peopleOutline, optionsOutline
+  checkmark, checkmarkDone, leafOutline, eyeOutline, eyeOffOutline, shieldOutline, peopleOutline, optionsOutline,
+  callOutline
 } from 'ionicons/icons';
+
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
 import HiveSplash from '@/components/HiveSplash.vue';
 import AdminDashboard from '@/components/AdminDashboard.vue';
@@ -760,6 +783,8 @@ import FloweringPlant from '@/components/FloweringPlant.vue';
 import BeeComposite from '@/components/BeeComposite.vue';
 import DailyLoginModal from '@/components/DailyLoginModal.vue';
 import { useDailyLoginService } from '@/services/DailyLoginService';
+import { useCallService } from '@/services/CallService';
+
 
 interface BeeState {
   beeId: string;
@@ -797,7 +822,10 @@ const {
     getColonyMembers, isAdmin, isSuperAdmin
 } = useUserService();
 
+const { startCall } = useCallService();
+
 const activeTab = ref('hive'); // 'hive' or 'messages'
+
 const messageSearchQuery = ref('');
 
 const totalUnread = computed(() => {
@@ -1606,7 +1634,6 @@ watch(buzzes, (newBuzzes) => {
     const messageAge = now - messageTime;
     
     // Debug log to help track delivery issues
-    console.log(`💬 Processing received buzz: "${latest.message}" from ${latest.sender}. Age: ${messageAge}ms`);
     
     if (messageAge > 10000) return;
 
@@ -2178,6 +2205,18 @@ const goToProfile = (beeId: string | undefined | null) => {
         router.push(`/tabs/profile/${beeId}`);
     }, 100);
 };
+
+const handleVoiceCall = async () => {
+    if (!selectedBee.value?.beeId) return;
+    try {
+        await startCall(selectedBee.value.beeId);
+        isModalOpen.value = false;
+        router.push('/call');
+    } catch (e) {
+        console.error('Call failed:', e);
+    }
+};
+
 
 const getNotifEmoji = (type: string) => {
     switch(type) {
@@ -2938,15 +2977,80 @@ const handleNotifClick = (notif: any) => {
     font-weight: 800;
     color: var(--ion-color-primary);
     letter-spacing: 1.5px;
-    margin: auto;
     cursor: pointer;
     display: inline-block;
-    padding: 4px 12px;
+    padding: 6px 14px;
     background: rgba(255, 191, 0, 0.1);
     border-radius: 20px;
     border: 1px solid rgba(255, 191, 0, 0.2);
     width: fit-content;
+    transition: all 0.2s ease;
 }
+
+.view-profile-link:active {
+  transform: scale(0.9);
+  background: rgba(255, 191, 0, 0.2);
+}
+
+.header-links {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.call-link {
+  color: #2dd36f;
+  background: rgba(45, 211, 111, 0.1);
+  border-color: rgba(45, 211, 111, 0.2);
+}
+
+.wide-call-btn {
+  width: 100%;
+  height: clamp(50px, 12vw, 56px);
+  background: rgba(45, 211, 111, 0.05);
+  border: 1.5px solid rgba(45, 211, 111, 0.3);
+  border-radius: 18px;
+  color: #2dd36f;
+  font-weight: 800;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 15px;
+  letter-spacing: 1.5px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(45, 211, 111, 0.15);
+}
+
+.wide-call-btn:active {
+  transform: scale(0.98);
+  background: rgba(45, 211, 111, 0.15);
+}
+
+
+.chat-header-call-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #2dd36f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  margin-left: auto;
+  transition: all 0.2s ease;
+}
+
+.chat-header-call-btn:active {
+  transform: scale(0.9);
+  background: rgba(45, 211, 111, 0.1);
+}
+
 
 .large-avatar-hex {
   position: relative;

@@ -1138,7 +1138,6 @@ const takePhoto = async () => {
       await alert.present();
     }
   } catch (error) {
-    console.log('Camera cancelled or failed');
   }
 };
 

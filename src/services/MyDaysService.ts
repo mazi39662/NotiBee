@@ -479,7 +479,6 @@ export function useMyDaysService() {
             }).flat();
             await Promise.all(deletePromises);
 
-            console.log(`Deleted ${deletePromises.length} expired stories`);
         } catch (error) {
             console.error('Error deleting expired stories:', error);
         }

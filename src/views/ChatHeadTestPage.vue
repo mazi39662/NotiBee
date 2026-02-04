@@ -135,7 +135,6 @@ function addLog(message: string) {
   if (logs.value.length > 10) {
     logs.value.pop();
   }
-  console.log(message);
 }
 
 onMounted(async () => {

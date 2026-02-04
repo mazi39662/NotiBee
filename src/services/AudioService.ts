@@ -24,7 +24,6 @@ export const useAudioService = () => {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             // Immediately stop tracks to release the mic
             stream.getTracks().forEach(track => track.stop());
-            console.log('🎤 Mic permission granted via prompt');
             return true;
         } catch (e) {
             console.error('🎤 Mic permission failed or denied', e);
@@ -49,16 +48,13 @@ export const useAudioService = () => {
 
     const startRecording = async () => {
         try {
-            console.log('🎤 Starting recording process...');
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
                 throw new Error('Microphone API not supported in this browser/environment');
             }
 
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log('🎤 Stream acquired', stream.id);
 
             const mimeType = getSupportedMimeType();
-            console.log('🎤 Using mimeType:', mimeType || 'default');
 
             try {
                 mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});

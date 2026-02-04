@@ -20,6 +20,8 @@ import { useNotificationService } from '@/services/NotificationService';
 import { useThemeService } from '@/services/ThemeService';
 import { Geolocation } from '@capacitor/geolocation';
 import { useUpdateService } from '@/services/UpdateService';
+import { useCallService } from '@/services/CallService';
+
 
 const { initPush, sendLocalBuzz } = usePushService();
 const { shouldNotify } = useNotificationService();
@@ -27,7 +29,9 @@ const { userBeeId } = useUserService();
 const { initInboxListener, processOutbox } = useBuzzService();
 const { initTheme } = useThemeService();
 const { isOnline } = useNetworkService();
+const { initPeer, callState } = useCallService();
 const router = useRouter();
+
 
 const currentUser = ref(auth.currentUser);
 const { updateOnlineStatus, userVisibility, updateLocation } = useUserService();
@@ -50,7 +54,6 @@ const startHeartbeat = () => {
                         updateLocation(position.coords.latitude, position.coords.longitude, true);
                     }
                 } catch (e) {
-                    console.warn('Background location skip:', e);
                 }
             }
         }
@@ -77,20 +80,32 @@ onMounted(async () => {
     
     // Track auth state reactively
     auth.onAuthStateChanged((user) => {
-        console.log('🔐 Auth State Changed:', user?.uid);
         currentUser.value = user;
     });
 
     // Handle App State (Foreground/Background)
     App.addListener('appStateChange', ({ isActive }) => {
         if (isActive) {
-            console.log('📱 App Active: Starting heartbeat');
             startHeartbeat();
+            
+            // Re-verify Peer connection to prevent stale session errors
+            const { initPeer, destroyPeer, callState } = useCallService();
+            if (userBeeId.value && currentUser.value) {
+                // Aggressively clear error state to hide the 'Blocked' modal
+                callState.value.error = undefined; 
+                destroyPeer();
+                // Wait 2 seconds before re-init to allow server to clear the stale ID
+                setTimeout(() => initPeer(), 2000);
+            }
         } else {
-            console.log('💤 App Background: Stopping heartbeat');
             stopHeartbeat();
+            // On background, it's safer to disconnect Peer to prevent stale session on server
+            const { destroyPeer } = useCallService();
+            destroyPeer();
         }
     });
+
+
 
     // Initial start if already active
     startHeartbeat();
@@ -112,9 +127,27 @@ watch([userBeeId, currentUser], ([newBeeId, user]) => {
     }
 
     if (newBeeId && user) {
-        console.log(`🎬 Bee radio tuning into: ${newBeeId}`);
         unsubscribeInbox = initInboxListener(newBeeId, async (sender: string, msg: string, image?: string, type?: string, roomId?: string) => {
+            const { stopRingingHaptics, endCall } = useCallService();
+            
+            if (type === 'CALL_REJECTED' || type === 'CALL_ENDED' || type === 'CALL_DISMISSED') {
+                stopRingingHaptics();
+                endCall();
+                return; 
+            }
+
+
             sendLocalBuzz(sender, msg, image, type, roomId);
+            
+            if (type === 'CALL_REACTION') {
+                callState.value.lastReaction = { 
+                    sender: sender, 
+                    emoji: msg, 
+                    id: Date.now() 
+                };
+                return;
+            }
+
             
             // Show Alert for Friend Requests
             if (type === 'FRIEND_REQUEST') {
@@ -138,6 +171,12 @@ watch([userBeeId, currentUser], ([newBeeId, user]) => {
                 if (type === 'VIBRATE') {
                     // Long pulse for forced vibrations
                     Haptics.vibrate({ duration: 500 });
+                } else if (type === 'CALL_REQUEST') {
+                    // Redirect to call page immediately for incoming calls
+                    const { callState } = useCallService();
+                    callState.value.incomingCall = true;
+                    callState.value.remotePeerId = sender;
+                    router.push('/call');
                 } else {
                     Haptics.impact({ style: ImpactStyle.Heavy });
                 }
@@ -146,14 +185,25 @@ watch([userBeeId, currentUser], ([newBeeId, user]) => {
         
         // Initial online status update
         updateOnlineStatus();
+
+        // Initialize PeerJS
+        initPeer();
     }
 }, { immediate: true });
+
 
 // Watch for network restoration to auto-send failed messages
 watch(isOnline, (online) => {
     if (online) {
-        console.log('📡 Connection restored! Processing outbox...');
         processOutbox();
     }
 });
+
+// 📞 Global Call Navigation Watcher (Covers both Signaling & PeerJS paths)
+watch(() => callState.value.incomingCall, (incoming) => {
+    if (incoming && router.currentRoute.value.path !== '/call') {
+        router.push('/call');
+    }
+});
+
 </script>
