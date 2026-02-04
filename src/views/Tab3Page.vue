@@ -186,6 +186,10 @@
               <ion-icon :icon="documentTextOutline" slot="start"></ion-icon>
               <ion-label>Legal & Privacy</ion-label>
             </ion-item>
+            <ion-item button @click="openFeedbackForm">
+              <ion-icon :icon="chatbubbleEllipsesOutline" slot="start"></ion-icon>
+              <ion-label>Feedback</ion-label>
+            </ion-item>
           </ion-list>
         </div>
 
@@ -514,7 +518,8 @@ import {
     moonOutline, sunnyOutline, chevronDownCircleOutline,
     trophyOutline, podiumOutline, syncOutline,
     eye, eyeOff, lockClosedOutline, chevronForwardOutline,
-    documentTextOutline, downloadOutline, shareOutline, personOutline
+    documentTextOutline, downloadOutline, shareOutline, personOutline,
+    chatbubbleEllipsesOutline
 } from 'ionicons/icons';
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -760,6 +765,10 @@ const doSaveId = async () => {
     } finally {
         isSaving.value = false;
     }
+};
+
+const openFeedbackForm = () => {
+  window.open('https://docs.google.com/forms/d/e/1FAIpQLSe9Xujo4tHVL6XppNazeiTfpLzhZSPNGZ0C3GUjVOW8hbDX7g/viewform?usp=publish-editor', '_system');
 };
 
 const handleVerifyAccess = async () => {
