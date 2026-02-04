@@ -35,6 +35,8 @@ export interface Story {
     beeId: string;
     imageUrl?: string; // Single image
     imageUrls?: string[]; // Multiple images for carousel
+    audioUrl?: string; // For audio posts
+    audioDuration?: number; // Duration in seconds
     caption?: string;
     textContent?: string; // For text-only posts
     backgroundColor?: string; // Background color for text posts
@@ -249,6 +251,40 @@ export function useMyDaysService() {
     };
 
     /**
+     * Create an audio story
+     */
+    const createAudioStory = async (audioUrl: string, duration: number, caption?: string): Promise<void> => {
+        if (!currentUserBeeId) throw new Error('No Bee ID found');
+
+        try {
+            isLoading.value = true;
+            const now = Date.now();
+            const expiresAt = now + (24 * 60 * 60 * 1000); // 24 hours from now
+
+            // Save to Firestore
+            await addDoc(collection(db, 'stories'), {
+                beeId: currentUserBeeId,
+                audioUrl: audioUrl,
+                audioDuration: duration,
+                caption: caption || '',
+                createdAt: Timestamp.fromMillis(now),
+                expiresAt: Timestamp.fromMillis(expiresAt),
+                likes: [],
+                views: [],
+                comments: []
+            });
+
+            // Refresh stories
+            await fetchStories();
+        } catch (error: any) {
+            console.error('Error creating audio story:', error);
+            throw error;
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    /**
      * Fetch all active stories (not expired)
      */
     const fetchStories = async (isLoadMore = false): Promise<void> => {
@@ -305,6 +341,8 @@ export function useMyDaysService() {
                     beeId: data.beeId,
                     imageUrl: data.imageUrl,
                     imageUrls: data.imageUrls || [],
+                    audioUrl: data.audioUrl,
+                    audioDuration: data.audioDuration,
                     caption: data.caption,
                     textContent: data.textContent,
                     backgroundColor: data.backgroundColor,
@@ -387,6 +425,8 @@ export function useMyDaysService() {
                     beeId: data.beeId,
                     imageUrl: data.imageUrl,
                     imageUrls: data.imageUrls || [],
+                    audioUrl: data.audioUrl,
+                    audioDuration: data.audioDuration,
                     caption: data.caption,
                     textContent: data.textContent,
                     backgroundColor: data.backgroundColor,
@@ -666,6 +706,8 @@ export function useMyDaysService() {
                     beeId: data.beeId,
                     imageUrl: data.imageUrl,
                     imageUrls: data.imageUrls || [],
+                    audioUrl: data.audioUrl,
+                    audioDuration: data.audioDuration,
                     caption: data.caption,
                     textContent: data.textContent,
                     backgroundColor: data.backgroundColor,
@@ -808,12 +850,11 @@ export function useMyDaysService() {
 
     return {
         stories,
-        integratedStories,
         myStories,
         isLoading,
-        hasMore,
         createStory,
         createTextStory,
+        createAudioStory,
         uploadStory,
         batchUploadStories,
         fetchStories,
@@ -829,8 +870,9 @@ export function useMyDaysService() {
         getStoriesByUser,
         initStoriesListener,
         hasLiked,
+        hasMore,
         getTimeRemaining,
-        reportStory
+        reportStory,
+        integratedStories
     };
 }
-

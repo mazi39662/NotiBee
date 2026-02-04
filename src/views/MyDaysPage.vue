@@ -132,6 +132,21 @@
                     {{ story.caption }}
                   </div>
                 </div>
+
+                <!-- Audio Story -->
+                <div v-else-if="!('isAd' in story) && story.audioUrl" class="card-audio-wrapper" @click.stop>
+                  <AudioBubble 
+                    :src="story.audioUrl" 
+                    :duration="story.audioDuration || 0" 
+                    :msg-id="story.id"
+                    :is-own="story.beeId === userBeeId"
+                    :customization="getBeeCustomization(story.beeId)"
+                    @play="markAsViewed(story.id)"
+                  />
+                  <div v-if="story.caption" class="card-caption">
+                    {{ story.caption }}
+                  </div>
+                </div>
                 
                 <!-- Text Story -->
                 <div v-else class="card-text-story" :style="{ backgroundColor: story.backgroundColor || '#ffbf00' }">
@@ -271,6 +286,17 @@
 
             <!-- Single Image Post -->
             <img v-else-if="currentStory.imageUrl" :src="currentStory.imageUrl" alt="Story" />
+
+            <!-- Audio Post -->
+            <div v-else-if="currentStory.audioUrl" class="audio-story-content">
+               <AudioBubble 
+                :src="currentStory.audioUrl" 
+                :duration="currentStory.audioDuration || 0" 
+                :msg-id="currentStory.id"
+                :is-own="currentStory.beeId === userBeeId"
+                :customization="getBeeCustomization(currentStory.beeId)"
+               />
+            </div>
             
             <!-- Text Post -->
             <div v-else class="text-story" :style="{ backgroundColor: currentStory.backgroundColor || '#ffbf00' }">
@@ -498,6 +524,71 @@
           loading-text="Buzzing for more..."
         ></ion-infinite-scroll-content>
       </ion-infinite-scroll>
+
+      <!-- Audio Recording Modal -->
+      <ion-modal
+        :is-open="showAudioModal"
+        @didDismiss="showAudioModal = false"
+        class="audio-modal"
+      >
+        <div class="modal-wrapper audio-record-wrapper">
+          <div class="modal-header">
+            <h2>Record Nectar</h2>
+            <ion-button fill="clear" @click="showAudioModal = false">
+              <ion-icon :icon="closeOutline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
+          <div class="audio-record-content">
+            <div class="recording-visualizer" v-if="isRecording">
+              <div class="red-dot"></div>
+              <span class="timer">{{ formatTime(recordingTime) }} / 1:00</span>
+            </div>
+            <div class="audio-placeholder" v-else>
+              <ion-icon :icon="micOutline" class="big-mic"></ion-icon>
+              <p>Share your voice with the hive!</p>
+            </div>
+          </div>
+
+          <div class="caption-input-area glass-panel" v-if="!isRecording">
+            <ion-textarea
+              v-model="uploadCaption"
+              placeholder="Add a sweet caption..."
+              :auto-grow="true"
+              :rows="2"
+              class="caption-input"
+            ></ion-textarea>
+          </div>
+
+          <div class="preview-actions">
+            <template v-if="!isRecording">
+              <ion-button 
+                expand="block" 
+                color="danger" 
+                @click="startRecording()"
+              >
+                Start Recording 🎤
+              </ion-button>
+            </template>
+            <template v-else>
+              <ion-button 
+                expand="block" 
+                color="warning" 
+                @click="confirmAudioUpload"
+              >
+                Stop & Share 🌸
+              </ion-button>
+              <ion-button 
+                fill="clear" 
+                color="medium" 
+                @click="cancelAudioRecording"
+              >
+                Cancel
+              </ion-button>
+            </template>
+          </div>
+        </div>
+      </ion-modal>
       
       <HiveSplash :show="isLoading" status-text="Gathering Nectar..." />
 
@@ -703,7 +794,7 @@ import {
 } from '@ionic/vue';
 import {
   addCircleOutline, heartOutline, heart, eyeOutline,
-  trashOutline, closeOutline, cameraOutline, imagesOutline,
+  trashOutline, closeOutline, cameraOutline, imagesOutline, micOutline,
   createOutline, chevronDownCircleOutline, chatbubbleOutline,
   paperPlaneOutline, leafOutline, leaf,
   informationCircleOutline, happyOutline, flash, alertCircleOutline, checkmarkDoneOutline
@@ -720,6 +811,8 @@ import { useRouter } from 'vue-router';
 import { Keyboard } from '@capacitor/keyboard';
 import { Capacitor } from '@capacitor/core';
 import HiveSplash from '@/components/HiveSplash.vue';
+import AudioBubble from '@/components/AudioBubble.vue';
+import { useAudioService } from '@/services/AudioService';
 
 const commentsModal = ref<any>(null);
 const commentsListRef = ref<HTMLElement | null>(null);
@@ -742,6 +835,7 @@ const {
   isLoading,
   createStory,
   createTextStory,
+  createAudioStory,
   uploadStory,
   batchUploadStories,
   fetchStories,
@@ -769,6 +863,17 @@ const {
   showInterstitial,
   showRewarded
 } = useAdService();
+
+const { 
+  isRecording, 
+  recordingTime, 
+  startRecording, 
+  stopRecording, 
+  cancelRecording, 
+  uploadAudio,
+  requestMicPermission,
+  formatTime
+} = useAudioService();
 
 const revealedViewers = ref(new Set<string>());
 const selectedSegment = ref('everyone');
@@ -886,6 +991,9 @@ const handleItemClick = (item: any) => {
     if (item.ctaUrl) {
       window.open(item.ctaUrl, '_blank');
     }
+  } else if (item.audioUrl) {
+    // For audio posts, we don't open the viewer - they play directly in the card
+    return;
   } else {
     openStoryViewer(item, [item]);
   }
@@ -927,6 +1035,7 @@ const showCreateOptions = ref(false);
 const showTextModal = ref(false);
 const showImagePreview = ref(false);
 const showBatchPreview = ref(false);
+const showAudioModal = ref(false);
 const isViewerOpen = ref(false);
 const uploadCaption = ref('');
 const viewerImageIndex = ref(0);
@@ -1578,6 +1687,46 @@ const removeBatchItem = (index: number) => {
   }
 };
 
+const cancelAudioRecording = () => {
+  cancelRecording();
+  showAudioModal.value = false;
+};
+
+const confirmAudioUpload = async () => {
+  try {
+    const blob = await stopRecording();
+    showAudioModal.value = false;
+    
+    // Upload to Firebase Storage
+    const downloadUrl = await uploadAudio(blob, userBeeId.value || 'unknown');
+    
+    // Create Story record
+    await createAudioStory(downloadUrl, recordingTime.value, uploadCaption.value);
+    
+    const toast = await toastController.create({
+      message: 'Audio Nectar shared! 🌸',
+      duration: 3000,
+      color: 'warning'
+    });
+    await toast.present();
+    
+    // Show Interstitial Ad (monetization)
+    setTimeout(() => {
+      showInterstitial();
+    }, 1000);
+
+    uploadCaption.value = '';
+  } catch (error) {
+    console.error('Audio upload failed:', error);
+    const toast = await toastController.create({
+      message: 'Failed to share audio nectar',
+      duration: 3000,
+      color: 'danger'
+    });
+    await toast.present();
+  }
+};
+
 const createActionButtons = [
   {
     text: 'Write Text',
@@ -1593,6 +1742,23 @@ const createActionButtons = [
     text: 'Choose from Gallery',
     icon: imagesOutline,
     handler: handleUploadWithPreview
+  },
+  {
+    text: 'Record Audio',
+    icon: micOutline,
+    handler: async () => { 
+      const hasPermission = await requestMicPermission();
+      if (hasPermission) {
+        showAudioModal.value = true; 
+      } else {
+        const toast = await toastController.create({
+          message: 'Microphone permission is required to record nectar! 🎤',
+          duration: 3000,
+          color: 'danger'
+        });
+        await toast.present();
+      }
+    }
   },
   {
     text: 'Cancel',
@@ -2723,10 +2889,15 @@ ion-toolbar {
 .preview-actions {
   display: flex;
   gap: 12px;
+  width: 100%;
 }
 
 .preview-actions ion-button {
   flex: 1;
+  --border-radius: 16px;
+  font-weight: 700;
+  height: 54px;
+  margin: 0;
 }
 
 .story-slide {
@@ -3165,5 +3336,108 @@ ion-toolbar {
 .ad-card .card-avatar {
   background: var(--ion-color-light);
   border: 1px solid var(--ion-color-primary);
+}
+
+/* Audio Story Styles */
+.card-audio-wrapper {
+  padding: 24px 20px;
+  background: rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  min-height: 120px;
+  justify-content: center;
+  overflow: visible; /* Allow bee to pop out */
+}
+
+.audio-story-content {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.audio-record-wrapper {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.audio-record-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 200px;
+}
+
+.recording-visualizer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+
+.red-dot {
+  width: 70px;
+  height: 70px;
+  background: #ff4444;
+  border-radius: 50%;
+  box-shadow: 0 0 30px rgba(255, 68, 68, 0.6);
+  animation: pulse-red 1s infinite alternate;
+}
+
+@keyframes pulse-red {
+  from { transform: scale(1); box-shadow: 0 0 20px rgba(255, 68, 68, 0.4); }
+  to { transform: scale(1.15); box-shadow: 0 0 40px rgba(255, 68, 68, 0.8); }
+}
+
+.timer {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  color: var(--ion-text-color);
+}
+
+.big-mic {
+  font-size: 70px;
+  color: #ffbf00;
+  margin-bottom: 20px;
+  filter: drop-shadow(0 0 15px rgba(255, 191, 0, 0.4));
+}
+
+.audio-placeholder p {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #888;
+  margin: 0;
+}
+
+/* Audio Recording Specific Actions */
+.audio-record-wrapper .preview-actions {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.audio-record-wrapper .preview-actions ion-button {
+  height: 60px;
+  font-size: 1.1rem;
+  --box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.audio-record-wrapper .preview-actions ion-button[color="warning"] {
+  --background: linear-gradient(135deg, #ffbf00, #ff9900);
+  --color: #000;
+}
+
+.audio-record-wrapper .preview-actions ion-button[fill="clear"] {
+  height: 40px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  --color: #888;
 }
 </style>

@@ -74,6 +74,8 @@ const props = defineProps<{
   customization?: { top: string, body: string, eyes: string };
 }>();
 
+const emit = defineEmits(['play']);
+
 const { getLocalAudio, saveAudioLocally } = useAudioService();
 const { userBeeId } = useUserService();
 const audioRef = ref<HTMLAudioElement | null>(null);
@@ -286,6 +288,7 @@ const togglePlay = async () => {
         if (audioCtx.value?.state === 'suspended') await audioCtx.value.resume();
         await audioRef.value.play();
         isPlaying.value = true;
+        emit('play');
         analyzeAudio();
     } catch (err) { console.error(err); }
   }

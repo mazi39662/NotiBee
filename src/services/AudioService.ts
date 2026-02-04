@@ -83,7 +83,7 @@ export const useAudioService = () => {
 
             timerInterval = setInterval(() => {
                 recordingTime.value++;
-                if (recordingTime.value >= 30) {
+                if (recordingTime.value >= 60) {
                     stopRecording();
                 }
             }, 1000);
