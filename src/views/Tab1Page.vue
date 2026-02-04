@@ -715,6 +715,13 @@
 
       <!-- Hive Splash Screen -->
       <HiveSplash :show="showSplash" status-text="Gathering the swarm..." />
+
+      <!-- Daily Login Modal -->
+      <DailyLoginModal 
+        :is-open="isDailyLoginOpen" 
+        @close="isDailyLoginOpen = false"
+        @claimed="isDailyLoginOpen = false"
+      />
     </ion-content>
   </ion-page>
 </template>
@@ -751,6 +758,8 @@ import { BarcodeScanner, BarcodeFormat } from '@capacitor-mlkit/barcode-scanning
 import { App } from '@capacitor/app';
 import FloweringPlant from '@/components/FloweringPlant.vue';
 import BeeComposite from '@/components/BeeComposite.vue';
+import DailyLoginModal from '@/components/DailyLoginModal.vue';
+import { useDailyLoginService } from '@/services/DailyLoginService';
 
 interface BeeState {
   beeId: string;
@@ -1166,6 +1175,9 @@ onMounted(() => {
                 showTutorial.value = true;
             }, 2500);
         }
+
+        // Init Daily Login
+        initDailyLogin();
     }
 });
 
@@ -1398,6 +1410,18 @@ watch(colonyIds, (newIds) => {
 }, { immediate: true });
 
 // Specifically watch the current user's record
+// Daily Login logic
+const { initLoginData, isClaimedToday: isDailyClaimed } = useDailyLoginService();
+const isDailyLoginOpen = ref(false);
+
+const initDailyLogin = async () => {
+    await initLoginData();
+    if (!isDailyClaimed.value) {
+        setTimeout(() => {
+            isDailyLoginOpen.value = true;
+        }, 3500); // Show after splash and initial animations
+    }
+};
 watch(userBeeId, (id) => {
     if (myUnsubscribe) myUnsubscribe();
     if (id) {

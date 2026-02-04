@@ -22,8 +22,17 @@ export const useHoneyService = () => {
         if (type === 'COMMENT') dropsToAdd = 3;
         if (type === 'POLLINATE') dropsToAdd = 2;
 
-        honeyDrops.value += dropsToAdd;
-        lifetimeHoneyDrops.value += dropsToAdd;
+        await addBulkHoneyDrops(dropsToAdd);
+    };
+
+    /**
+     * Bulk add honey drops (e.g. for rewards)
+     */
+    const addBulkHoneyDrops = async (count: number) => {
+        if (!userBeeId.value || count <= 0) return;
+
+        honeyDrops.value += count;
+        lifetimeHoneyDrops.value += count;
 
         if (honeyDrops.value >= DROPS_PER_JAR) {
             const newJars = Math.floor(honeyDrops.value / DROPS_PER_JAR);
@@ -117,6 +126,7 @@ export const useHoneyService = () => {
         jarProgress,
         unlockedRevelations,
         addHoneyDrops,
+        addBulkHoneyDrops,
         addHoneyJar,
         consumeJar,
         isRevealed,
