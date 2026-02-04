@@ -38,36 +38,31 @@
             <div class="identity-header">
               <h1>{{ userProfile.beeId }}</h1>
             </div>
-            
-            <div v-if="isMe" class="profile-me-actions">
-              <ion-button expand="block" color="primary" class="customize-btn-large" @click="router.push('/tabs/customize-bee')">
-                <ion-icon :icon="brushOutline" slot="start"></ion-icon>
-                Customize My Bee
-              </ion-button>
+
+            <!-- Status Indicator -->
+            <div v-if="userProfile.status" class="status-humming glass-panel gold-glow">
+              <span class="status-dot"></span>
+              <p>{{ userProfile.status }}</p>
             </div>
             
             <div class="bio-container">
-              <p v-if="!isEditingBio" class="bio-text">
+              <p class="bio-text">
                 {{ userProfile.bio || "This bee hasn't shared a hum yet." }}
-                <ion-button v-if="isMe" fill="clear" size="small" @click="startEditingBio" class="edit-bio-btn">
-                  <ion-icon :icon="pencilOutline"></ion-icon>
-                </ion-button>
               </p>
-              <div v-else class="bio-edit-mode">
-                <ion-textarea 
-                  fill="outline" 
-                  placeholder="Tell the Hive about yourself..." 
-                  v-model="tempBio"
-                  auto-grow
-                  :maxlength="150"
-                  class="bio-input"
-                ></ion-textarea>
-                <div class="bio-edit-actions">
-                  <ion-button size="small" fill="clear" color="medium" @click="isEditingBio = false">Cancel</ion-button>
-                  <ion-button size="small" fill="solid" color="primary" @click="saveBio">Save</ion-button>
-                </div>
-              </div>
             </div>
+            
+            <div v-if="isMe" class="profile-me-actions">
+              <ion-button expand="block" shape="round" color="primary" class="edit-profile-btn-large" @click="isEditModalOpen = true">
+                <ion-icon :icon="settingsOutline" slot="start"></ion-icon>
+                Edit Profile
+              </ion-button>
+              <ion-button expand="block" shape="round" fill="outline" color="primary" class="customize-btn-large" @click="router.push('/tabs/customize-bee')">
+                <ion-icon :icon="brushOutline" slot="start"></ion-icon>
+                Style My Bee
+              </ion-button>
+            </div>
+
+            
           </div>
         </div>
 
@@ -108,6 +103,44 @@
           </div>
           <div v-else class="streak-message">
             <p>💬 Start chatting to begin your streak together!</p>
+          </div>
+        </div>
+
+        <!-- About This Bee -->
+        <div v-if="userProfile.gender || userProfile.age || userProfile.relationship || (userProfile.hobbies && userProfile.hobbies.length > 0)" class="about-section">
+          <div class="about-grid">
+            <div v-if="userProfile.gender" class="about-item">
+              <div class="about-icon">{{ getGenderIcon(userProfile.gender) }}</div>
+              <div class="about-info">
+                <span class="about-label">Gender</span>
+                <span class="about-value">{{ getGenderLabel(userProfile.gender) }}</span>
+              </div>
+            </div>
+
+            <div v-if="userProfile.age" class="about-item">
+              <div class="about-icon">🎂</div>
+              <div class="about-info">
+                <span class="about-label">Age</span>
+                <span class="about-value">{{ userProfile.age }} years</span>
+              </div>
+            </div>
+
+            <div v-if="userProfile.relationship" class="about-item">
+              <div class="about-icon">❤️</div>
+              <div class="about-info">
+                <span class="about-label">Status</span>
+                <span class="about-value">{{ getRelationshipLabel(userProfile.relationship) }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="userProfile.hobbies && userProfile.hobbies.length > 0" class="hobbies-container">
+            <h3><ion-icon :icon="sparklesOutline"></ion-icon> Pollinating Interests</h3>
+            <div class="hobbies-list">
+              <span v-for="hobby in userProfile.hobbies" :key="hobby" class="hobby-pill">
+                {{ hobby }}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -353,6 +386,22 @@
         </div>
       </ion-modal>
 
+      <!-- Edit Profile Modal -->
+      <EditProfileModal 
+        v-if="userProfile"
+        :is-open="isEditModalOpen"
+        :initial-data="{
+          status: userProfile?.status,
+          bio: userProfile?.bio,
+          gender: userProfile?.gender,
+          hobbies: userProfile?.hobbies,
+          age: userProfile?.age !== undefined ? Number(userProfile.age) : null,
+          relationship: userProfile?.relationship
+        }"
+        @close="isEditModalOpen = false"
+        @saved="refreshProfile"
+      />
+
     </ion-content>
   </ion-page>
 </template>
@@ -367,7 +416,7 @@ import {
   pencilOutline, trophyOutline, cameraOutline, flash, 
   closeOutline, personAddOutline, checkmarkCircleOutline,
   eyeOutline, chevronForwardOutline, alertCircleOutline,
-  brushOutline
+  brushOutline, settingsOutline, sparklesOutline
 } from 'ionicons/icons';
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -376,6 +425,7 @@ import { useStreakService } from '@/services/StreakService';
 import { useMyDaysService } from '@/services/MyDaysService';
 import { useHoneyService } from '@/services/HoneyService';
 import BeeComposite from '@/components/BeeComposite.vue';
+import EditProfileModal from '@/components/EditProfileModal.vue';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 const route = useRoute();
@@ -401,8 +451,7 @@ const isRequesting = ref(false);
 const loading = ref(true);
 const userProfile = ref<any>(null);
 const userStories = ref<any[]>([]);
-const isEditingBio = ref(false);
-const tempBio = ref('');
+const isEditModalOpen = ref(false);
 const selectedStory = ref<any>(null);
 const pairStreak = ref<any>(null);
 const isVisitorsModalOpen = ref(false);
@@ -462,27 +511,43 @@ const hasAchievement = (id: string) => {
   return (userProfile.value?.achievements || []).includes(id);
 };
 
-const startEditingBio = () => {
-  tempBio.value = userProfile.value.bio || '';
-  isEditingBio.value = true;
+const refreshProfile = async () => {
+    try {
+        const profile = await getUserProfile(beeId.value);
+        if (profile) userProfile.value = profile;
+    } catch (e) {
+        console.error(e);
+    }
 };
 
-const saveBio = async () => {
-  try {
-    await updateBio(tempBio.value);
-    userProfile.value.bio = tempBio.value;
-    isEditingBio.value = false;
-    
-    const toast = await toastController.create({
-      message: 'Bio updated! 🍯',
-      duration: 2000,
-      color: 'success',
-      position: 'top'
-    });
-    await toast.present();
-  } catch (e) {
-    console.error(e);
-  }
+const getGenderIcon = (gender: string) => {
+    const icons: any = {
+        'male': '♂️',
+        'female': '♀️',
+        'non-binary': '✨',
+        'private': '🤫'
+    };
+    return icons[gender] || '♂️';
+};
+
+const getGenderLabel = (gender: string) => {
+    const labels: any = {
+        'male': 'Male Bee',
+        'female': 'Female Bee',
+        'non-binary': 'Other',
+        'private': 'Prefer not to say'
+    };
+    return labels[gender] || 'Unknown';
+};
+
+const getRelationshipLabel = (status: string) => {
+    const labels: any = {
+        'single': 'Single',
+        'taken': 'Taken',
+        'complicated': 'Complicated',
+        'private': 'Prefer not to say'
+    };
+    return labels[status] || 'Unknown';
 };
 
 const openStory = (story: any) => {
@@ -895,15 +960,18 @@ ion-toolbar {
 /* Stats Row */
 .stats-row {
   display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
 .stat-card {
-  flex: 1;
+  min-width: 100px;
   padding: 16px;
   border-radius: 16px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
 }
 
@@ -1415,15 +1483,160 @@ ion-toolbar {
 
 .profile-me-actions {
   width: 100%;
-  margin-top: 5px;
+  margin-top: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-profile-btn-large {
+  --border-radius: 12px;
+  --background: var(--ion-color-primary);
+  --color: #1a1a2e;
+  font-weight: 800;
+  height: 48px;
+  margin: 0;
 }
 
 .customize-btn-large {
   --border-radius: 12px;
-  --background: var(--ion-color-primary);
-  --color: black;
+  --color: var(--ion-color-primary);
   font-weight: 800;
   height: 48px;
-  --box-shadow: 0 4px 15px rgba(255, 191, 0, 0.2);
+  margin: 0;
+}
+
+.status-humming {
+  margin-top: 10px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 10px 16px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 90%;
+  width: fit-content;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #ffbf00;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #ffbf00;
+  animation: glow 2s infinite ease-in-out;
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.status-humming p {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.about-section {
+  padding: 24px;
+  border-radius: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.about-grid {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.about-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 10px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex: 1;
+  min-width: 130px;
+  max-width: 180px;
+  transition: transform 0.2s ease;
+}
+
+.about-item:active {
+  transform: scale(0.98);
+}
+
+.about-icon {
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.about-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.about-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.about-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hobbies-container h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffbf00;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.hobbies-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.hobby-pill {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
 }
 </style>

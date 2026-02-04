@@ -350,6 +350,19 @@ export const useUserService = () => {
         await updateDoc(userDoc, { customization: selections });
     };
 
+    const updateProfile = async (updates: {
+        bio?: string,
+        status?: string,
+        gender?: string,
+        hobbies?: string[],
+        age?: number | null,
+        relationship?: string
+    }) => {
+        if (!userBeeId.value) return;
+        const userDoc = doc(db, 'users', userBeeId.value);
+        await updateDoc(userDoc, updates);
+    };
+
     const getUserProfile = async (beeId: string) => {
         if (beeId === 'superadmin') return null;
         const userDoc = doc(db, 'users', beeId);
@@ -588,6 +601,7 @@ export const useUserService = () => {
         getVisibleBees,
         updateVisibility,
         updateBio,
+        updateProfile,
         getUserProfile,
         updateBeeCustomization,
         recordProfileVisit,
