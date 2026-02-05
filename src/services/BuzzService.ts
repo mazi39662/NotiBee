@@ -148,7 +148,7 @@ export const useBuzzService = () => {
    * 👂 The FREE Relay Listener
    * Watches the specific "inbox" of this Bee ID in Firestore.
    */
-  const initInboxListener = (beeId: string, onMessage: (sender: string, msg: string, image?: string, type?: string, roomId?: string, audioUrl?: string, duration?: number) => void) => {
+  const initInboxListener = (beeId: string, onMessage: (sender: string, msg: string, image?: string, type?: string, roomId?: string, audioUrl?: string, duration?: number, metadata?: any) => void) => {
     const inboxRef = collection(db, 'users', beeId, 'inbox');
     const q = query(inboxRef);
 
@@ -172,7 +172,7 @@ export const useBuzzService = () => {
               } else if (data.type === 'READ_RECEIPT') {
                 updateLocalMessageStatus(data.msgId, 'read');
               } else {
-                onMessage(data.from, data.message, data.image, data.type, data.roomId, data.audioUrl, data.duration);
+                onMessage(data.from, data.message, data.image, data.type, data.roomId, data.audioUrl, data.duration, data.metadata);
 
                 // Add to global notification list
                 addNotification(data.from, data.message || 'Sent a buzz! 🐝', data.type || 'BUZZ');

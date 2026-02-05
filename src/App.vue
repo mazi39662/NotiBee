@@ -127,7 +127,7 @@ watch([userBeeId, currentUser], ([newBeeId, user]) => {
     }
 
     if (newBeeId && user) {
-        unsubscribeInbox = initInboxListener(newBeeId, async (sender: string, msg: string, image?: string, type?: string, roomId?: string) => {
+        unsubscribeInbox = initInboxListener(newBeeId, async (sender: string, msg: string, image?: string, type?: string, roomId?: string, audioUrl?: string, duration?: number, metadata?: any) => {
             const { stopRingingHaptics, endCall } = useCallService();
             
             if (type === 'CALL_REJECTED' || type === 'CALL_ENDED' || type === 'CALL_DISMISSED') {
@@ -143,7 +143,8 @@ watch([userBeeId, currentUser], ([newBeeId, user]) => {
                 callState.value.lastReaction = { 
                     sender: sender, 
                     emoji: msg, 
-                    id: Date.now() 
+                    id: Date.now(),
+                    metadata: metadata
                 };
                 return;
             }

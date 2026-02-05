@@ -14,7 +14,7 @@ export interface CallState {
     remoteStream: MediaStream | null;
     callType: 'audio' | 'video';
     error?: string;
-    lastReaction?: { sender: string; emoji: string; id: number };
+    lastReaction?: { sender: string; emoji: string; id: number; metadata?: any };
     peerReady: boolean;
 }
 
@@ -356,13 +356,15 @@ export const useCallService = () => {
     };
 
 
-    const sendReaction = async (recipientId: string, emoji: string) => {
+    const sendReaction = async (recipientId: string, emoji: string, metadata?: any) => {
         if (!userBeeId.value) return;
         const inboxRef = collection(db, 'users', recipientId, 'inbox');
         await addDoc(inboxRef, {
             from: userBeeId.value,
             type: 'CALL_REACTION',
             emoji: emoji,
+            message: emoji, // Ensure compatibility with BuzzService listener
+            metadata: metadata || null,
             timestamp: new Date().toISOString()
         });
     };

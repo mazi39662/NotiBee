@@ -276,6 +276,11 @@ const activeAnims = reactive({
   remote: null as string | null
 });
 
+const animStartTime = reactive({
+  local: 0,
+  remote: 0
+});
+
 const beeRotations = reactive({
   local: 0,
   remote: 0
@@ -342,37 +347,45 @@ const updateBeeTarget = (who: 'local' | 'remote') => {
 
 
 const triggerAnimation = (animId: string) => {
-  playAnimation('local', animId);
+  const startTime = Date.now() + 500; // Buffer for network latency
+  playAnimation('local', animId, startTime);
   if (callState.value.remotePeerId) {
-    signalReaction(callState.value.remotePeerId, animId);
+    signalReaction(callState.value.remotePeerId, animId, { startTime });
   }
 };
 
-const playAnimation = (who: 'local' | 'remote', animId: string) => {
-  activeAnims[who] = animId;
+const playAnimation = (who: 'local' | 'remote', animId: string, startTime?: number) => {
+  const start = startTime || Date.now();
+  const delay = Math.max(0, start - Date.now());
   
-  if (animId === 'LOVE') {
-    const arr = who === 'local' ? localParticles : remoteParticles;
-    for (let i = 0; i < 8; i++) {
-       const id = Math.random();
-       arr.value.push({
-         id,
-         emoji: '❤️',
-         startX: 0,
-         startY: 0,
-         x: (Math.random() - 0.5) * 150,
-         y: (Math.random() - 0.5) * 150
-       });
-       setTimeout(() => {
-         arr.value = arr.value.filter(p => p.id !== id);
-       }, 1500);
-    }
-  }
+  animStartTime[who] = start;
 
   setTimeout(() => {
-    activeAnims[who] = null;
-    updateBeeTarget(who);
-  }, 3000);
+    activeAnims[who] = animId;
+    
+    if (animId === 'LOVE') {
+      const arr = who === 'local' ? localParticles : remoteParticles;
+      for (let i = 0; i < 8; i++) {
+         const id = Math.random();
+         arr.value.push({
+           id,
+           emoji: '❤️',
+           startX: 0,
+           startY: 0,
+           x: (Math.random() - 0.5) * 150,
+           y: (Math.random() - 0.5) * 150
+         });
+         setTimeout(() => {
+           arr.value = arr.value.filter(p => p.id !== id);
+         }, 1500);
+      }
+    }
+
+    setTimeout(() => {
+      activeAnims[who] = null;
+      updateBeeTarget(who);
+    }, 3000);
+  }, delay);
 };
 
 
@@ -380,7 +393,7 @@ const playAnimation = (who: 'local' | 'remote', animId: string) => {
 
 watch(() => callState.value.lastReaction, (react) => {
   if (react && react.sender === callState.value.remotePeerId) {
-    playAnimation('remote', react.emoji);
+    playAnimation('remote', react.emoji, react.metadata?.startTime);
   }
 });
 
@@ -558,6 +571,8 @@ const moveBee = (who: 'local' | 'remote') => {
   const current = beeStyles[who];
   const talking = who === 'local' ? isLocalTalking.value : isRemoteTalking.value;
   const activeAnim = activeAnims[who];
+  const startTime = animStartTime[who] || Date.now();
+  const tRel = Date.now() - startTime;
 
   // If animating or talking, we need per-frame jitter/offsets
   // otherwise we let the CSS transition do the work for normal flight
@@ -569,18 +584,18 @@ const moveBee = (who: 'local' | 'remote') => {
     let rot = 0;
 
     if (activeAnim === 'ZIGZAG') {
-      driftX = Math.sin(Date.now() / 50) * 15;
-      driftY = (Math.sin(Date.now() / 100)) * 10;
-      rot = Math.sin(Date.now() / 50) * 15;
+      driftX = Math.sin(tRel / 50) * 15;
+      driftY = (Math.sin(tRel / 100)) * 10;
+      rot = Math.sin(tRel / 50) * 15;
     } else if (activeAnim === 'FIGURE8') {
-      const t = Date.now() / 400;
+      const t = tRel / 400;
       driftX = Math.sin(t) * 25;
       driftY = (Math.sin(2 * t) / 2) * 25;
       rot = Math.cos(t) * 10;
     } else if (activeAnim === 'SPIN') {
       driftY = -2;
     } else if (activeAnim === 'BOUNCE') {
-      const t = (Date.now() % 800) / 800; 
+      const t = (tRel % 800) / 800; 
       driftY = (4 * t * (t - 1)) * 50; 
     } 
     
