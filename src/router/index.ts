@@ -72,6 +72,10 @@ const routes: Array<RouteRecordRaw> = [
         path: 'admin',
         component: () => import('@/views/AdminPage.vue'),
         meta: { requiresAdmin: true }
+      },
+      {
+        path: 'reminders',
+        component: () => import('@/views/BuzzRemindersPage.vue')
       }
     ]
   },

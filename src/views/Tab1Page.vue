@@ -59,6 +59,9 @@
               <div v-if="isAdmin" @click="router.push('/tabs/admin')" class="nest-notif-btn secondary-btn">
                 <ion-icon :icon="shieldOutline" class="radar-header-icon"></ion-icon>
               </div>
+              <div @click="router.push('/tabs/reminders')" class="nest-notif-btn secondary-btn">
+                <ion-icon :icon="alarmOutline" class="radar-header-icon"></ion-icon>
+              </div>
               <div @click="isGardenModalOpen = true" class="nest-notif-btn secondary-btn">
                 <ion-icon :icon="optionsOutline" class="radar-header-icon"></ion-icon>
               </div>
@@ -765,7 +768,7 @@ import {
   timeOutline, chatbubbleOutline, cameraOutline, imageOutline, closeCircle,
   qrCodeOutline, locationOutline, scanOutline, trophyOutline, micOutline, notificationsOutline, personAddOutline,
   checkmark, checkmarkDone, leafOutline, eyeOutline, eyeOffOutline, shieldOutline, peopleOutline, optionsOutline,
-  callOutline
+  callOutline, alarmOutline
 } from 'ionicons/icons';
 
 import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';

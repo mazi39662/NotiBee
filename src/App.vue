@@ -21,6 +21,7 @@ import { useThemeService } from '@/services/ThemeService';
 import { Geolocation } from '@capacitor/geolocation';
 import { useUpdateService } from '@/services/UpdateService';
 import { useCallService } from '@/services/CallService';
+import { useReminderService } from '@/services/ReminderService';
 
 
 const { initPush, sendLocalBuzz } = usePushService();
@@ -77,6 +78,7 @@ onMounted(async () => {
 
     initPush();
     initTheme();
+    useReminderService().init();
     
     // Track auth state reactively
     auth.onAuthStateChanged((user) => {
