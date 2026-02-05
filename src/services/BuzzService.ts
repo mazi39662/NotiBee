@@ -9,9 +9,9 @@ export interface Buzz {
   sender: string;
   recipient: string;
   message: string;
-  image?: string;
-  audioUrl?: string;
-  duration?: number;
+  image?: string | null;
+  audioUrl?: string | null;
+  duration?: number | null;
   time: string;
   status: 'sending' | 'sent' | 'delivered' | 'read' | 'error';
   timestamp: string;
@@ -69,26 +69,27 @@ export const useBuzzService = () => {
   const saveToLocal = (newBuzz: Buzz) => {
     if (!saveHistoryEnabled.value) return;
 
-    // Prevent duplicates
+    // Prevent duplicates and update existing (e.g. status changes)
     const index = buzzes.value.findIndex(b => b.id === newBuzz.id);
     if (index !== -1) {
-      buzzes.value[index] = { ...buzzes.value[index], ...newBuzz };
+      const updatedBuzzes = [...buzzes.value];
+      updatedBuzzes[index] = { ...updatedBuzzes[index], ...newBuzz };
+      buzzes.value = updatedBuzzes;
     } else {
-      buzzes.value.unshift(newBuzz);
-    }
-
-    // Limit history - if we have many images, 50 might hit the 5MB localStorage limit
-    // We'll keep 50 messages, but maybe fewer if they are large?
-    // For now, let's stick to 50 but ensure we don't crash.
-    if (buzzes.value.length > 50) {
-      buzzes.value = buzzes.value.slice(0, 50);
+      // Use array spread to ensure reactivity triggers in all contexts
+      const newList = [newBuzz, ...buzzes.value];
+      // Limit history
+      if (newList.length > 50) {
+        buzzes.value = newList.slice(0, 50);
+      } else {
+        buzzes.value = newList;
+      }
     }
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(buzzes.value));
     } catch (e) {
       console.warn('⚠️ LocalStorage full! History might not be saved.', e);
-      // If full, try keeping only the 10 most recent to clear some space
       if (buzzes.value.length > 10) {
         buzzes.value = buzzes.value.slice(0, 10);
         try {
@@ -139,7 +140,9 @@ export const useBuzzService = () => {
   const updateBuzzStatus = (msgId: string, status: Buzz['status']) => {
     const index = buzzes.value.findIndex(b => b.id === msgId);
     if (index !== -1) {
-      buzzes.value[index] = { ...buzzes.value[index], status };
+      const updated = [...buzzes.value];
+      updated[index] = { ...updated[index], status };
+      buzzes.value = updated;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(buzzes.value));
     }
   };
@@ -153,45 +156,44 @@ export const useBuzzService = () => {
     const q = query(inboxRef);
 
     return onSnapshot(q, async (snapshot) => {
-      const { addNotification } = await import('./NotificationService').then(m => m.useNotificationService());
+      // Pre-import notification service once per snapshot if changes exist
+      let notifyService: any = null;
+      if (snapshot.docChanges().length > 0) {
+        notifyService = await import('./NotificationService').then(m => m.useNotificationService());
+      }
 
-      snapshot.docChanges().forEach(async (change) => {
+      for (const change of snapshot.docChanges()) {
         if (change.type === 'added') {
           const data = change.doc.data();
 
-          // If the message is from ourselves, skip processing it as a "received" message
-          // because sendBuzz already added it to our local "sent" history.
-          // Process the message
           try {
-            // Self-buzz check
-            if (data.from === beeId) {
-              // Self-buzzes are already handled locally or irrelevant for notification
-            } else {
+            if (data.from !== beeId) {
               if (data.type === 'REACTION') {
                 updateLocalReaction(data.msgId, data.emoji, data.from);
               } else if (data.type === 'READ_RECEIPT') {
                 updateLocalMessageStatus(data.msgId, 'read');
               } else {
-                onMessage(data.from, data.message, data.image, data.type, data.roomId, data.audioUrl, data.duration, data.metadata);
-
-                // Only add to global notification list if it's NOT a standard chat message
+                // 1. ADD TO HISTORY FIRST - Crucial for immediate UI update
                 const isMessage = !data.type || data.type === 'BUZZ' || data.type === 'AUDIO' || data.type === 'ROOM_BUZZ' || data.type === 'ROOM_BUZZ_AUDIO';
 
-                if (!isMessage || data.type === 'MISSED_CALL' || data.type === 'STREAK' || data.type === 'ACHIEVEMENT' || data.type === 'UPDATE') {
-                  addNotification(data.from, data.message || 'Sent a buzz! 🐝', data.type || 'BUZZ');
-                }
-
-                // Only save to history if it's a standard message or has content
-                if (!data.type || data.type === 'BUZZ' || data.type === 'AUDIO' || data.type === 'ROOM_BUZZ' || data.type === 'ROOM_BUZZ_AUDIO') {
+                if (isMessage) {
                   addReceivedBuzz(data.from, data.message, data.image, data.audioUrl, data.duration, data.msgId, data.type);
                   incrementUnread(data.from);
+                }
+
+                // 2. TRIGGER ONMESSAGE CALLBACK (e.g. for local notifications, call redirect)
+                onMessage(data.from, data.message, data.image, data.type, data.roomId, data.audioUrl, data.duration, data.metadata);
+
+                // 3. TRIGGER INTERNAL APP NOTIFICATION (if applicable)
+                if (notifyService && (!isMessage || ['MISSED_CALL', 'STREAK', 'ACHIEVEMENT', 'UPDATE'].includes(data.type))) {
+                  notifyService.addNotification(data.from, data.message || 'Sent a buzz! 🐝', data.type || 'BUZZ');
                 }
               }
             }
           } catch (err) {
             console.error('Error processing inbox item:', err);
           } finally {
-            // ALWAYS delete the message from Firestore to keep inbox ephemeral
+            // ALWAYS delete from Firestore immediately after processing
             try {
               await deleteDoc(change.doc.ref);
             } catch (e) {
@@ -199,7 +201,7 @@ export const useBuzzService = () => {
             }
           }
         }
-      });
+      }
     }, (error) => {
       console.error('❌ Inbox Listener Error:', error);
     });
@@ -368,9 +370,10 @@ export const useBuzzService = () => {
     const index = buzzes.value.findIndex(b => b.id === msgId);
     if (index === -1) return;
 
-    const buzz = buzzes.value[index];
-    const reactions = buzz.reactions || {};
-    const users = reactions[emoji] || [];
+    const updated = [...buzzes.value];
+    const buzz = { ...updated[index] };
+    const reactions = { ...(buzz.reactions || {}) };
+    const users = [...(reactions[emoji] || [])];
 
     if (users.includes(userBeeId)) {
       reactions[emoji] = users.filter(id => id !== userBeeId);
@@ -378,7 +381,9 @@ export const useBuzzService = () => {
       reactions[emoji] = [...users, userBeeId];
     }
 
-    buzzes.value[index] = { ...buzz, reactions };
+    buzz.reactions = reactions;
+    updated[index] = buzz;
+    buzzes.value = updated;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(buzzes.value));
   };
 
@@ -386,7 +391,9 @@ export const useBuzzService = () => {
   const updateLocalMessageStatus = (msgId: string, status: 'read' | 'delivered') => {
     const index = buzzes.value.findIndex(b => b.id === msgId);
     if (index !== -1) {
-      buzzes.value[index] = { ...buzzes.value[index], status };
+      const updated = [...buzzes.value];
+      updated[index] = { ...updated[index], status };
+      buzzes.value = updated;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(buzzes.value));
     }
   };

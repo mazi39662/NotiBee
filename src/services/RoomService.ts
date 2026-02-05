@@ -33,9 +33,9 @@ export interface RoomBuzz {
     id: string;
     sender: string;
     message: string;
-    image?: string;
-    audioUrl?: string;
-    duration?: number;
+    image?: string | null;
+    audioUrl?: string | null;
+    duration?: number | null;
     timestamp: number;
     reactions?: Record<string, string[]>;
     status?: 'sending' | 'sent' | 'error';
@@ -45,9 +45,9 @@ export interface RoomStory {
     id: string;
     roomId: string;
     beeId: string;
-    imageUrl?: string;
-    textContent?: string;
-    backgroundColor?: string;
+    imageUrl?: string | null;
+    textContent?: string | null;
+    backgroundColor?: string | null;
     createdAt: number;
     expiresAt: number;
     views: string[]; // Array of beeIds who viewed
@@ -149,6 +149,7 @@ export const useRoomService = () => {
         );
 
         return onSnapshot(q, (snapshot) => {
+            // Reassignment ensures Vue reactivity triggers
             currentRoomBuzzes.value = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
@@ -156,126 +157,188 @@ export const useRoomService = () => {
         });
     };
 
+    const addLocalRoomBuzz = (buzz: RoomBuzz) => {
+        // Prevent duplicates if snapshot already beat us
+        const exists = currentRoomBuzzes.value.some(b => b.id === buzz.id);
+        if (!exists) {
+            currentRoomBuzzes.value = [buzz, ...currentRoomBuzzes.value];
+        }
+    };
+
+    const updateLocalRoomBuzzStatus = (buzzId: string, status: RoomBuzz['status']) => {
+        const index = currentRoomBuzzes.value.findIndex(b => b.id === buzzId);
+        if (index !== -1) {
+            const updated = [...currentRoomBuzzes.value];
+            updated[index] = { ...updated[index], status };
+            currentRoomBuzzes.value = updated;
+        }
+    };
+
     const sendRoomBuzz = async (roomId: string, message: string, ownerId: string, image?: string) => {
         if (!userBeeId) return;
 
-        const buzz = {
+        const sharedId = 'rbuzz_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+        const buzz: RoomBuzz = {
+            id: sharedId,
             sender: userBeeId,
             message,
             image: image || null,
             timestamp: Date.now(),
-            reactions: {}
+            reactions: {},
+            status: 'sending'
         };
 
-        // 1. Add to shared buzzes under owner's doc
-        await addDoc(collection(db, 'users', ownerId, 'rooms', roomId, 'buzzes'), buzz);
+        // 1. Add locally immediately for Optimistic UI
+        addLocalRoomBuzz(buzz);
 
-        // 2. Update last message in ALL copies
-        await updateRoomCopies(roomId, {
-            lastMessage: message,
-            lastMessageTime: Date.now()
-        });
+        try {
+            // 2. Add to shared buzzes under owner's doc
+            const docRef = doc(db, 'users', ownerId, 'rooms', roomId, 'buzzes', sharedId);
+            await setDoc(docRef, {
+                sender: userBeeId,
+                message,
+                image: image || null, // Keep null for Firestore as it prefers it over undefined for 'clearing' fields
+                timestamp: Date.now(),
+                reactions: {}
+            });
 
-        // 3. Notify all other members via inbox and dispatch
-        const currentRoom = rooms.value.find(r => r.id === roomId);
-        if (currentRoom) {
-            const otherMembers = currentRoom.members.filter(m => m !== userBeeId);
-            const { getRecipientToken } = useUserService();
+            // 3. Update last message in ALL copies
+            await updateRoomCopies(roomId, {
+                lastMessage: message,
+                lastMessageTime: Date.now()
+            });
 
-            for (const memberId of otherMembers) {
-                try {
-                    // Real-time inbox for foreground
-                    const recipientInboxRef = collection(db, 'users', memberId, 'inbox');
-                    await addDoc(recipientInboxRef, {
-                        from: userBeeId,
-                        message: `[${currentRoom.name}] ${message}`,
-                        image: image || null,
-                        type: 'ROOM_BUZZ',
-                        roomId: roomId,
-                        timestamp: new Date().toISOString()
-                    });
+            // 4. Notify all other members via inbox and dispatch
+            const currentRoom = rooms.value.find(r => r.id === roomId);
+            if (currentRoom) {
+                const otherMembers = currentRoom.members.filter(m => m !== userBeeId);
+                const { getRecipientToken } = useUserService();
 
-                    // Background dispatch for push
-                    const { token } = await getRecipientToken(memberId);
-                    if (token) {
-                        const dispatchRef = collection(db, 'dispatch');
-                        await addDoc(dispatchRef, {
-                            to: token,
-                            title: `🐝 Hive: ${currentRoom.name}`,
-                            body: `${userBeeId}: ${message}`,
-                            data: {
-                                senderId: String(userBeeId),
-                                message: String(message),
-                                type: 'ROOM_BUZZ',
-                                roomId: String(roomId)
-                            },
+                for (const memberId of otherMembers) {
+                    try {
+                        const recipientInboxRef = collection(db, 'users', memberId, 'inbox');
+                        await addDoc(recipientInboxRef, {
+                            from: userBeeId,
+                            message: `[${currentRoom.name}] ${message}`,
+                            image: image || null,
+                            type: 'ROOM_BUZZ',
+                            roomId: roomId,
+                            msgId: sharedId,
                             timestamp: new Date().toISOString()
                         });
+
+                        const { token } = await getRecipientToken(memberId);
+                        if (token) {
+                            const dispatchRef = collection(db, 'dispatch');
+                            await addDoc(dispatchRef, {
+                                to: token,
+                                title: `🐝 Hive: ${currentRoom.name}`,
+                                body: `${userBeeId}: ${message}`,
+                                data: {
+                                    senderId: String(userBeeId),
+                                    message: String(message),
+                                    type: 'ROOM_BUZZ',
+                                    roomId: String(roomId),
+                                    msgId: sharedId
+                                },
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                    } catch (e) {
+                        console.error(`Failed to notify member ${memberId}`, e);
                     }
-                } catch (e) {
-                    console.error(`Failed to notify member ${memberId}`, e);
                 }
             }
+            updateLocalRoomBuzzStatus(sharedId, 'sent');
+        } catch (e) {
+            console.error('sendRoomBuzz failed:', e);
+            updateLocalRoomBuzzStatus(sharedId, 'error');
+            throw e;
         }
     };
 
     const sendRoomAudioBuzz = async (roomId: string, audioUrl: string, duration: number, ownerId: string) => {
         if (!userBeeId) return;
 
-        const buzz = {
+        const sharedId = 'raudio_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+
+        const buzz: RoomBuzz = {
+            id: sharedId,
             sender: userBeeId,
             message: '🎙️ Audio Message',
             audioUrl,
             duration,
             timestamp: Date.now(),
-            reactions: {}
+            reactions: {},
+            status: 'sending'
         };
 
-        await addDoc(collection(db, 'users', ownerId, 'rooms', roomId, 'buzzes'), buzz);
+        // Optimistic UI
+        addLocalRoomBuzz(buzz);
 
-        await updateRoomCopies(roomId, {
-            lastMessage: '🎙️ Audio Message',
-            lastMessageTime: Date.now()
-        });
+        try {
+            const docRef = doc(db, 'users', ownerId, 'rooms', roomId, 'buzzes', sharedId);
+            await setDoc(docRef, {
+                sender: userBeeId,
+                message: '🎙️ Audio Message',
+                audioUrl,
+                duration,
+                timestamp: Date.now(),
+                reactions: {}
+            });
 
-        const currentRoom = rooms.value.find(r => r.id === roomId);
-        if (currentRoom) {
-            const otherMembers = currentRoom.members.filter(m => m !== userBeeId);
-            const { getRecipientToken } = useUserService();
+            await updateRoomCopies(roomId, {
+                lastMessage: '🎙️ Audio Message',
+                lastMessageTime: Date.now()
+            });
 
-            for (const memberId of otherMembers) {
-                try {
-                    await addDoc(collection(db, 'users', memberId, 'inbox'), {
-                        from: userBeeId,
-                        message: `[${currentRoom.name}] 🎙️ Audio Message`,
-                        audioUrl,
-                        duration,
-                        type: 'ROOM_BUZZ_AUDIO',
-                        roomId: roomId,
-                        timestamp: new Date().toISOString()
-                    });
+            const currentRoom = rooms.value.find(r => r.id === roomId);
+            if (currentRoom) {
+                const otherMembers = currentRoom.members.filter(m => m !== userBeeId);
+                const { getRecipientToken } = useUserService();
 
-                    const { token } = await getRecipientToken(memberId);
-                    if (token) {
-                        await addDoc(collection(db, 'dispatch'), {
-                            to: token,
-                            title: `🐝 Hive: ${currentRoom.name}`,
-                            body: `${userBeeId} sent an audio buzz`,
-                            data: {
-                                senderId: String(userBeeId),
-                                message: '🎙️ Audio Message',
-                                audioUrl: String(audioUrl),
-                                duration: String(duration),
-                                type: 'ROOM_BUZZ_AUDIO',
-                                roomId: String(roomId)
-                            },
+                for (const memberId of otherMembers) {
+                    try {
+                        await addDoc(collection(db, 'users', memberId, 'inbox'), {
+                            from: userBeeId,
+                            message: `[${currentRoom.name}] 🎙️ Audio Message`,
+                            audioUrl,
+                            duration,
+                            type: 'ROOM_BUZZ_AUDIO',
+                            roomId: roomId,
+                            msgId: sharedId,
                             timestamp: new Date().toISOString()
                         });
+
+                        const { token } = await getRecipientToken(memberId);
+                        if (token) {
+                            await addDoc(collection(db, 'dispatch'), {
+                                to: token,
+                                title: `🐝 Hive: ${currentRoom.name}`,
+                                body: `${userBeeId} sent an audio buzz`,
+                                data: {
+                                    senderId: String(userBeeId),
+                                    message: '🎙️ Audio Message',
+                                    audioUrl: String(audioUrl),
+                                    duration: String(duration),
+                                    type: 'ROOM_BUZZ_AUDIO',
+                                    roomId: String(roomId),
+                                    msgId: sharedId
+                                },
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                    } catch (e) {
+                        console.error(`Failed to notify ${memberId}`, e);
                     }
-                } catch (e) {
-                    console.error(`Failed to notify ${memberId}`, e);
                 }
             }
+            updateLocalRoomBuzzStatus(sharedId, 'sent');
+        } catch (e) {
+            console.error('sendRoomAudioBuzz failed:', e);
+            updateLocalRoomBuzzStatus(sharedId, 'error');
+            throw e;
         }
     };
 
@@ -283,20 +346,42 @@ export const useRoomService = () => {
         if (!userBeeId) return;
 
         const buzzRef = doc(db, 'users', ownerId, 'rooms', roomId, 'buzzes', buzzId);
-        const buzz = currentRoomBuzzes.value.find(b => b.id === buzzId);
-        if (!buzz) return;
 
-        const currentReactions = buzz.reactions || {};
-        const userReactions = currentReactions[emoji] || [];
+        // Optimistic UI for reactions
+        const index = currentRoomBuzzes.value.findIndex(b => b.id === buzzId);
+        if (index !== -1) {
+            const updatedBuzzes = [...currentRoomBuzzes.value];
+            const buzz = { ...updatedBuzzes[index] };
+            const reactions = { ...(buzz.reactions || {}) };
+            const users = [...(reactions[emoji] || [])];
 
-        if (userReactions.includes(userBeeId)) {
-            await updateDoc(buzzRef, {
-                [`reactions.${emoji}`]: arrayRemove(userBeeId)
-            });
-        } else {
-            await updateDoc(buzzRef, {
-                [`reactions.${emoji}`]: arrayUnion(userBeeId)
-            });
+            if (users.includes(userBeeId)) {
+                reactions[emoji] = users.filter(id => id !== userBeeId);
+            } else {
+                reactions[emoji] = [...users, userBeeId];
+            }
+            buzz.reactions = reactions;
+            updatedBuzzes[index] = buzz;
+            currentRoomBuzzes.value = updatedBuzzes;
+        }
+
+        try {
+            const buzz = currentRoomBuzzes.value.find(b => b.id === buzzId);
+            if (!buzz) return;
+            const currentReactions = buzz.reactions || {};
+            const userReactions = currentReactions[emoji] || [];
+
+            if (userReactions.includes(userBeeId)) {
+                await updateDoc(buzzRef, {
+                    [`reactions.${emoji}`]: arrayRemove(userBeeId)
+                });
+            } else {
+                await updateDoc(buzzRef, {
+                    [`reactions.${emoji}`]: arrayUnion(userBeeId)
+                });
+            }
+        } catch (e) {
+            console.error('Failed to react to room buzz', e);
         }
     };
 
