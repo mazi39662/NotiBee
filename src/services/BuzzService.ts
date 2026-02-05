@@ -174,8 +174,12 @@ export const useBuzzService = () => {
               } else {
                 onMessage(data.from, data.message, data.image, data.type, data.roomId, data.audioUrl, data.duration, data.metadata);
 
-                // Add to global notification list
-                addNotification(data.from, data.message || 'Sent a buzz! 🐝', data.type || 'BUZZ');
+                // Only add to global notification list if it's NOT a standard chat message
+                const isMessage = !data.type || data.type === 'BUZZ' || data.type === 'AUDIO' || data.type === 'ROOM_BUZZ' || data.type === 'ROOM_BUZZ_AUDIO';
+
+                if (!isMessage || data.type === 'MISSED_CALL' || data.type === 'STREAK' || data.type === 'ACHIEVEMENT' || data.type === 'UPDATE') {
+                  addNotification(data.from, data.message || 'Sent a buzz! 🐝', data.type || 'BUZZ');
+                }
 
                 // Only save to history if it's a standard message or has content
                 if (!data.type || data.type === 'BUZZ' || data.type === 'AUDIO' || data.type === 'ROOM_BUZZ' || data.type === 'ROOM_BUZZ_AUDIO') {
@@ -328,7 +332,7 @@ export const useBuzzService = () => {
       const inboxRef = collection(db, 'users', recipientId, 'inbox');
       await addDoc(inboxRef, {
         from: senderId,
-        message: 'vibrated your device! ⚡',
+        message: 'You',
         type: 'VIBRATE',
         timestamp: new Date().toISOString()
       });
@@ -466,7 +470,7 @@ export const useBuzzService = () => {
           const inboxRef = collection(db, 'users', item.recipientId, 'inbox');
           await addDoc(inboxRef, {
             from: item.senderId,
-            message: 'vibrated your device! ⚡',
+            message: 'You',
             type: 'VIBRATE',
             timestamp: item.timestamp
           });

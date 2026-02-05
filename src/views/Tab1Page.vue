@@ -331,7 +331,7 @@
               </div>
               <div v-else class="requests-list">
                   <div 
-                    v-for="notif in notifications" 
+                    v-for="notif in sortedNotifications" 
                     :key="notif.id" 
                     class="request-card glass-panel"
                     :class="{ 'unread-notif': !notif.read }"
@@ -346,7 +346,10 @@
                               />
                           </div>
                           <div class="request-details">
-                              <h3 :style="{ color: notif.read ? '#888' : 'white' }">{{ notif.from }}</h3>
+                              <div style="display: flex; align-items: center; gap: 6px;">
+                                <span class="notif-type-emoji">{{ getNotifEmoji(notif.type) }}</span>
+                                <h3 :style="{ color: notif.read ? '#888' : 'white', margin: 0 }">{{ notif.from }}</h3>
+                              </div>
                               <p :style="{ color: notif.read ? '#666' : '#aaa' }">{{ notif.message }}</p>
                               <span class="notif-time">{{ getTimeAgo(notif.timestamp) }}</span>
                           </div>
@@ -876,6 +879,7 @@ const openConvoFromList = (convo: any) => {
 
 const {
     notifications,
+    sortedNotifications,
     unreadCount,
     markAllAsRead,
     markAsRead,
@@ -2226,6 +2230,10 @@ const getNotifEmoji = (type: string) => {
         case 'AUDIO': return '🎙️';
         case 'ROOM_BUZZ': return '🚪';
         case 'REACTION': return '❤️';
+        case 'MISSED_CALL': return '📞';
+        case 'STREAK': return '🔥';
+        case 'ACHIEVEMENT': return '🏆';
+        case 'UPDATE': return '🚀';
         default: return '🔔';
     }
 };
@@ -2236,8 +2244,16 @@ const handleNotifClick = (notif: any) => {
 
     if (notif.type === 'FRIEND_REQUEST') {
         isRequestModalOpen.value = true;
+    } else if (notif.type === 'MISSED_CALL') {
+        router.push('/call');
+    } else if (notif.type === 'STREAK') {
+        router.push(`/tabs/profile/${notif.from}`);
+    } else if (notif.type === 'ACHIEVEMENT') {
+        router.push('/tabs/achievements');
+    } else if (notif.type === 'UPDATE') {
+        router.push('/tabs/tab3');
     }
-    // Redirection for other types (BUZZ, VIBRATE, etc.) removed per user request
+    
     Haptics.impact({ style: ImpactStyle.Light });
 };
 </script>
@@ -4333,4 +4349,15 @@ const handleNotifClick = (notif: any) => {
 }
 
 
+
+.notif-type-emoji {
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 191, 0, 0.1);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
 </style>

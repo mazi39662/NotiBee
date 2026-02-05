@@ -35,6 +35,11 @@ export const useUpdateService = () => {
 
             // 2. Compare versions
             if (isNewerVersion(latestVersion, APP_VERSION)) {
+                // Add to internal notifications list
+                const { useNotificationService } = await import('./NotificationService');
+                const { addNotification } = useNotificationService();
+                addNotification('System', `New Update: ${latestVersion} available! 🚀`, 'UPDATE');
+
                 await showUpdateAlert(latestVersion, isForce, customMessage);
             } else {
             }

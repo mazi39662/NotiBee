@@ -217,7 +217,12 @@ export const usePushService = () => {
     };
 
     const sendMissedCallNotification = async (sender: string) => {
+        const { addNotification } = useNotificationService();
         try {
+            // 1. Add to app's global notification list
+            addNotification(sender, 'You missed a call', 'MISSED_CALL');
+
+            // 2. Schedule local push notification
             const notificationId = Math.floor(Math.random() * 100000);
             await LocalNotifications.schedule({
                 notifications: [

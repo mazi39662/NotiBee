@@ -192,6 +192,21 @@ export const useStreakService = () => {
 
         await batch.commit();
 
+        // 🔔 Notify about streak milestone (e.g. at day 3, 7, 14, 30, etc.)
+        if (updatedData.currentStreak >= 3 && updatedData.currentStreak !== (currentData?.currentStreak || 0)) {
+            try {
+                const inboxRef = collection(db, 'users', userId, 'inbox');
+                await addDoc(inboxRef, {
+                    from: friendId,
+                    message: `Streak Milestone! ${updatedData.currentStreak} days 🔥`,
+                    type: 'STREAK',
+                    timestamp: new Date().toISOString()
+                });
+            } catch (err) {
+                console.error('Failed to send streak notification', err);
+            }
+        }
+
         // Sync local user stats
         const stats = await syncUserStats(userId);
         await checkAchievements(userId, updatedData.currentStreak, stats.totalBuzzes);

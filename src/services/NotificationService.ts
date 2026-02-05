@@ -9,7 +9,7 @@ export interface NotificationPreferences {
 
 export interface AppNotification {
     id: string;
-    type: 'BUZZ' | 'VIBRATE' | 'FRIEND_REQUEST' | 'AUDIO' | 'ROOM_BUZZ' | 'SYSTEM' | 'REACTION';
+    type: 'BUZZ' | 'VIBRATE' | 'FRIEND_REQUEST' | 'AUDIO' | 'ROOM_BUZZ' | 'SYSTEM' | 'REACTION' | 'MISSED_CALL' | 'STREAK' | 'ACHIEVEMENT' | 'UPDATE';
     from: string;
     message: string;
     timestamp: number;
@@ -40,7 +40,7 @@ export const useNotificationService = () => {
         updatePrefs({ doNotDisturb: enabled });
     };
 
-    const shouldNotify = (type: 'BUZZ' | 'VIBRATE' | 'FRIEND_REQUEST' | 'AUDIO' | 'ROOM_BUZZ' | 'REACTION') => {
+    const shouldNotify = (type: AppNotification['type']) => {
         if (prefs.value.doNotDisturb) return false;
 
         switch (type) {
@@ -52,6 +52,11 @@ export const useNotificationService = () => {
                 return prefs.value.notifyVibrations;
             case 'FRIEND_REQUEST':
                 return prefs.value.notifyFriendRequests;
+            case 'MISSED_CALL':
+            case 'STREAK':
+            case 'ACHIEVEMENT':
+            case 'UPDATE':
+                return true;
             default: return true;
         }
     };
@@ -93,10 +98,12 @@ export const useNotificationService = () => {
     };
 
     const unreadCount = computed(() => notifications.value.filter(n => !n.read).length);
+    const sortedNotifications = computed(() => [...notifications.value].sort((a, b) => b.timestamp - a.timestamp));
 
     return {
         prefs,
         notifications,
+        sortedNotifications,
         unreadCount,
         updatePrefs,
         toggleDND,

@@ -101,7 +101,7 @@
           <span>Default</span>
         </div>
         <div 
-          v-for="eye in ['angry', 'crying', 'dizzy', 'eh', 'hehe', 'hehehe', 'kawaii', 'meh', 'shock', 'smiley', 'square_eye', 'what', 'x_eye', '._.']"
+          v-for="eye in ['angry', 'crying', 'dizzy', 'eh', 'hehe', 'hehehe', 'kawaii', 'meh', 'shock', 'smiley', 'square_eye', 'what', 'x_eye', 'nonchalant']"
           :key="eye"
           class="option-item" 
           :class="{ active: selections.eyes === eye }" 
