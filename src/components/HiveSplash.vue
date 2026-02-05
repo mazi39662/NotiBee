@@ -3,7 +3,9 @@
     <div v-if="show" class="hive-splash">
       <div class="splash-content animate-in">
         <div class="large-avatar-hex splash-logo">
-          <div class="hexagon hex-glow">🐝</div>
+          <div class="hexagon hex-glow">
+            <img src="/assets/logo-removebg.png" alt="NotiBee Logo" class="splash-logo-img" />
+          </div>
         </div>
         <!-- <h1 class="splash-title">NotiBee</h1> -->
         <div class="splash-loader">
@@ -35,11 +37,14 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--ion-background-color);
+  background: rgba(var(--ion-background-color-rgb), 0.5);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .splash-content {
@@ -70,6 +75,19 @@ export default {
 
 .hex-glow {
   filter: drop-shadow(0 0 15px rgba(255, 191, 0, 0.6));
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(255, 191, 0, 0.6)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 25px rgba(255, 191, 0, 0.8)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(255, 191, 0, 0.6)); }
+}
+
+.splash-logo-img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
 }
 
 .splash-title {
