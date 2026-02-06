@@ -592,6 +592,174 @@
       
       <HiveSplash :show="isLoading" status-text="Gathering Nectar..." />
 
+      <!-- Honey Harvest Modal -->
+      <ion-modal
+        :is-open="isJarModalOpen"
+        @didDismiss="isJarModalOpen = false"
+        class="jar-details-modal"
+      >
+        <div class="modal-wrapper jar-harvest-content">
+          <div class="modal-header">
+            <h2>Honey Harvest 🍯</h2>
+            <ion-button fill="clear" @click="isJarModalOpen = false">
+              <ion-icon :icon="closeOutline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+
+          <div class="harvest-jar-showcase">
+            <div class="jar-glass-container">
+              <svg class="jarr-v3" viewBox="0 0 463.4 463.4" height="220" width="220">
+                <defs>
+                  <linearGradient id="honeyYellowFill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#ffb300" />
+                    <stop offset="50%" stop-color="#fb8c00" />
+                    <stop offset="100%" stop-color="#e65100" />
+                  </linearGradient>
+
+                  <linearGradient id="labelGlow" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stop-color="#ffbf00" />
+                    <stop offset="50%" stop-color="#fff" />
+                    <stop offset="100%" stop-color="#ffbf00" />
+                    <animate attributeName="x1" values="-1;2" dur="3s" repeatCount="indefinite" />
+                    <animate attributeName="x2" values="0;3" dur="3s" repeatCount="indefinite" />
+                  </linearGradient>
+
+                  <clipPath id="jarClip">
+                    <path d="M401.028,668.96c-0.1-0.1-0.1-0.2-0.2-0.3c-3.2-4.8-6.9-9.6-10.4-14.2c-10-13.2-20.4-26.8-22.3-41.3
+                         c12.3-0.8,22.5-11.3,22.5-23.6c0-12.8-10.9-23.7-23.9-23.7h-88c-9.2-15.8-26.9-25.5-47.1-25.5h-0.1c-20.1,0-37.8,9.9-46.4,25.5
+                         h-88.5c-13,0-23.9,10.8-23.9,23.7c0,12.4,10.3,23,22.7,23.6c-3.3,14.6-14.5,30.2-25.4,45.4c-2.4,3.3-4.8,6.7-7.1,10
+                         c-0.1,0.1-0.2,0.3-0.3,0.4c-5.1,8.4-7.4,18.6-6.1,28v231.9c-1.3,23.8,8.6,46.9,26.7,62c0.3,0.2,0.6,0.4,0.9,0.6
+                         c11.9,7.3,24.7,11.1,38,11.1l219.6,1.2c11.6,0,22.9-2.9,32.7-8.4c0.2-0.1,0.5-0.3,0.7-0.5c20.4-14.8,32.1-38.7,32.1-65.8v-231.4
+                         C407.128,689.26,406.028,677.36,401.028,668.96z" />
+                  </clipPath>
+
+                  <radialGradient id="honeyBubbleGrad">
+                    <stop offset="0%" stop-color="rgba(255,255,255,0.6)" />
+                    <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+                  </radialGradient>
+                  
+                  <filter id="glassRefraction" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur" />
+                    <feSpecularLighting in="blur" surfaceScale="5" specularConstant="0.8" specularExponent="20" lighting-color="#ffffff" result="specOut">
+                      <fePointLight x="100" y="600" z="300" />
+                    </feSpecularLighting>
+                    <feComposite in="specOut" in2="SourceGraphic" operator="in" result="specChar" />
+                    <feComposite in="SourceGraphic" in2="specChar" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" />
+                  </filter>
+
+                  <radialGradient id="honeyDropGrad">
+                    <stop offset="10%" stop-color="#ffe082" />
+                    <stop offset="90%" stop-color="#ffb300" />
+                  </radialGradient>
+                </defs>
+
+                  <g transform="translate(0 -540.36)">
+                  <!-- Main Jar Body (Glass base) -->
+                  <path class="jar-body-glass" d="M401.028,668.96c-0.1-0.1-0.1-0.2-0.2-0.3c-3.2-4.8-6.9-9.6-10.4-14.2c-10-13.2-20.4-26.8-22.3-41.3
+                         c12.3-0.8,22.5-11.3,22.5-23.6c0-12.8-10.9-23.7-23.9-23.7h-88c-9.2-15.8-26.9-25.5-47.1-25.5h-0.1c-20.1,0-37.8,9.9-46.4,25.5
+                         h-88.5c-13,0-23.9,10.8-23.9,23.7c0,12.4,10.3,23,22.7,23.6c-3.3,14.6-14.5,30.2-25.4,45.4c-2.4,3.3-4.8,6.7-7.1,10
+                         c-0.1,0.1-0.2,0.3-0.3,0.4c-5.1,8.4-7.4,18.6-6.1,28v231.9c-1.3,23.8,8.6,46.9,26.7,62c0.3,0.2,0.6,0.4,0.9,0.6
+                         c11.9,7.3,24.7,11.1,38,11.1l219.6,1.2c11.6,0,22.9-2.9,32.7-8.4c0.2-0.1,0.5-0.3,0.7-0.5c20.4-14.8,32.1-38.7,32.1-65.8v-231.4
+                         C407.128,689.26,406.028,677.36,401.028,668.96z" />
+
+                    <!-- Waving Honey Filling -->
+                  <g clip-path="url(#jarClip)">
+                    <!-- Accurate coordinate translation -->
+                    <g class="honey-wave-group" :style="{ transform: `translate(0, ${982 - (jarProgress * 3.8)}px)` }">
+                      <!-- Perfectly tileable wave path (1000px wide pattern) -->
+                      <path class="honey-wave-path" d="M-1000,0 C-750,-40 -750,40 -500,0 C-250,-40 -250,40 0,0 C250,-40 250,40 500,0 C750,-40 750,40 1000,0 V1000 H-1000 Z" fill="url(#honeyYellowFill)" />
+                      
+                      <!-- Internal Bubbles with randomized paths -->
+                      <circle cx="150" cy="80" r="4" fill="url(#honeyBubbleGrad)">
+                        <animate attributeName="cy" values="400;50" dur="8s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0;0.5;0" dur="8s" repeatCount="indefinite" />
+                      </circle>
+                      <circle cx="300" cy="150" r="6" fill="url(#honeyBubbleGrad)">
+                        <animate attributeName="cy" values="400;20" dur="12s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0;0.4;0" dur="12s" repeatCount="indefinite" />
+                      </circle>
+                      <circle cx="220" cy="200" r="3" fill="url(#honeyBubbleGrad)">
+                        <animate attributeName="cy" values="400;100" dur="10s" repeatCount="indefinite" />
+                        <animate attributeName="opacity" values="0;0.6;0" dur="10s" repeatCount="indefinite" />
+                      </circle>
+                    </g>
+                  </g>
+
+
+                  <!-- Glass Highlights -->
+                  <path d="M125,650 Q110,700 110,800 T125,950" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="8" stroke-linecap="round" filter="url(#glassRefraction)" />
+                  <ellipse cx="230" cy="590" rx="100" ry="10" fill="rgba(255,255,255,0.2)" />
+                  
+                  <!-- Honey Drops on the surface -->
+                  <path class="honey-drop drop-1" d="M150,700 c-5,0 -10,5 -10,12 c0,7 5,12 10,12 c5,0 10,-5 10,-12 c0,-7 -5,-12 -10,-12 z" fill="url(#honeyDropGrad)" />
+                  <path class="honey-drop drop-2" d="M320,780 c-4,0 -8,4 -8,10 c0,6 4,10 8,10 c4,0 8,-4 8,-10 c0,-6 -4,-10 -8,-10 z" fill="url(#honeyDropGrad)" />
+                  <path class="honey-drop drop-3" d="M380,680 c-6,0 -12,6 -12,15 c0,9 6,15 12,15 c6,0 12,-6 12,-15 c0,-9 -6,-15 -12,-15 z" fill="url(#honeyDropGrad)" />
+
+                  <!-- Jar Rim/Details -->
+                  <path class="jar-rim" d="M87.728,589.56c0-4.5,4.2-8.7,8.9-8.7h270c4.7,0,8.9,4.1,8.9,8.7c0,4.6-4.2,8.7-8.9,8.7h-257.5C91.928,598.16,87.728,594.06,87.728,589.56z" fill="rgba(255,255,255,0.8)" />
+
+                  <!-- Jar Label/Indicator (Cooler Design) -->
+                  <g transform="translate(115, 720)">
+                    <!-- Glassy Plate -->
+                    <rect width="230" height="90" rx="20" fill="rgba(0, 0, 0, 0.3)" />
+                    <rect width="230" height="90" rx="20" fill="rgba(255, 255, 255, 0.05)" stroke="rgba(255, 255, 255, 0.2)" stroke-width="2" />
+                    
+                    <!-- Text with Shine Effect -->
+                    <text x="115" y="45" font-family="'Pacifico', cursive" font-size="32" fill="url(#labelGlow)" text-anchor="middle" style="filter: drop-shadow(0 0 10px rgba(255, 191, 0, 0.5));">
+                      Honey Drops
+                    </text>
+                    <text x="115" y="72" font-family="'Outfit', sans-serif" font-size="11" fill="rgba(255,255,255,0.5)" text-anchor="middle" font-weight="900" style="text-transform: uppercase; letter-spacing: 5px;">
+                      Organic Nectar
+                    </text>
+
+                    <!-- Decorative Corner Accents -->
+                    <circle cx="15" cy="15" r="3" fill="#ffbf00" opacity="0.6" />
+                    <circle cx="215" cy="15" r="3" fill="#ffbf00" opacity="0.6" />
+                    <circle cx="15" cy="75" r="3" fill="#ffbf00" opacity="0.6" />
+                    <circle cx="215" cy="75" r="3" fill="#ffbf00" opacity="0.6" />
+                  </g>
+                </g>
+              </svg>
+              
+              <!-- Honey Particles falling into the jar lid -->
+              <div class="honey-droplets-rain">
+                <span class="honey-droplet d-one"></span>
+                <span class="honey-droplet d-two"></span>
+                <span class="honey-droplet d-three"></span>
+                <span class="honey-droplet d-four"></span>
+                <span class="honey-droplet d-five"></span>
+                <span class="honey-droplet d-six"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="harvest-stats-card glass-panel">
+            <div class="honey-info-row">
+              <span class="info-label">Current Progress</span>
+              <span class="info-value">{{ Math.round(jarProgress) }}%</span>
+            </div>
+            <div class="honey-info-row">
+              <span class="info-label">Drops Collected</span>
+              <span class="info-value">{{ honeyDrops }}/30</span>
+            </div>
+            <div class="honey-info-row">
+              <span class="info-label">Full Jars Available</span>
+              <span class="info-value">{{ honeyJars }} 🏺</span>
+            </div>
+            <p class="harvest-tip">Interact with nectar to gather more drops and fill your jar!</p>
+          </div>
+
+          <div class="harvest-actions">
+            <ion-button expand="block" class="ad-reward-button" @click="handleGetFreeJar">
+              Watch Ad for +10 Drops 🍯✨
+            </ion-button>
+            <ion-button expand="block" fill="clear" color="medium" @click="isJarModalOpen = false">
+              OK
+            </ion-button>
+          </div>
+        </div>
+      </ion-modal>
+
       <!-- Comments Drawer -->
       <ion-modal
         ref="commentsModal"
@@ -818,12 +986,13 @@ const commentsModal = ref<any>(null);
 const commentsListRef = ref<HTMLElement | null>(null);
 const keyboardOffset = ref(0); // Kept for other potential uses if any, but removing listeners below
 
-const { 
+const {
   honeyDrops, 
   honeyJars, 
   jarProgress, 
   consumeJar,
-  isRevealed
+  isRevealed,
+  addBulkHoneyDrops
 } = useHoneyService();
 const honeyJarIcon = '🏺';
 
@@ -953,30 +1122,16 @@ const handleRevealViewer = async (id: string) => {
   }
 };
 
-const showJarDetails = async () => {
-    const alert = await alertController.create({
-        header: 'Honey Harvest 🍯',
-        message: `You have ${honeyDrops.value}/30 drops to fill your next jar. You have ${honeyJars.value} full jars ready! \n\nInteract with nectar to gather more drops!`,
-        buttons: [
-          {
-            text: 'Watch Ad for +1 Jar 🏺',
-            handler: () => {
-              handleGetFreeJar();
-            }
-          },
-          { text: 'OK' }
-        ]
-    });
-    await alert.present();
+const showJarDetails = () => {
+    isJarModalOpen.value = true;
 };
 
 const handleGetFreeJar = () => {
   showRewarded(async () => {
-     const { addHoneyJar } = useHoneyService();
-     await addHoneyJar(1);
+     await addBulkHoneyDrops(10);
      
      const toast = await toastController.create({
-       message: 'Rewarded! You earned 1 Honey Jar! 🏺✨',
+       message: 'Rewarded! You earned 10 Honey Drops! 🍯✨',
        duration: 3000,
        color: 'warning'
      });
@@ -1046,6 +1201,7 @@ const currentStoryIndex = ref(0);
 const router = useRouter();
 
 const isCommentsOpen = ref(false);
+const isJarModalOpen = ref(false);
 const isSendingComment = ref(false);
 const newComment = ref('');
 const isViewsModalOpen = ref(false);
@@ -1784,14 +1940,21 @@ const getRelativeTime = (timestamp: number): string => {
 .header-honey-jar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(255, 191, 0, 0.1);
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 191, 0, 0.2);
+  gap: 8px;
+  background: rgba(255, 191, 0, 0.08);
+  padding: 6px 12px;
+  border-radius: 24px;
+  border: 1px solid rgba(255, 191, 0, 0.15);
   margin-right: 8px;
   cursor: pointer;
   flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-honey-jar:hover {
+  background: rgba(255, 191, 0, 0.15);
+  box-shadow: 0 0 15px rgba(255, 191, 0, 0.2);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 360px) {
@@ -1831,7 +1994,230 @@ const getRelativeTime = (timestamp: number): string => {
 .jar-count {
   font-weight: 800;
   font-size: 14px;
-  color: var(--ion-color-primary);
+  color: #ffbf00;
+}
+
+/* Jar Details Modal Styles */
+.jar-details-modal {
+  --background: var(--ion-background-color);
+}
+
+.jar-harvest-content {
+  padding: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+}
+
+.harvest-jar-showcase {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 0;
+  perspective: 1000px;
+}
+
+.jar-glass-container {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.jarr-v3 {
+  z-index: 5;
+  filter: drop-shadow(0 0 15px rgba(255, 191, 0, 0.2));
+  transform: rotate(-2deg);
+  animation: gentle-wobble 6s infinite ease-in-out;
+}
+
+@keyframes gentle-wobble {
+  0%, 100% { transform: rotate(-2deg) translateY(0); }
+  50% { transform: rotate(2deg) translateY(-5px); }
+}
+
+.honey-wave-group {
+  transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.honey-wave-path {
+  animation: move-wave 10s linear infinite;
+}
+
+@keyframes move-wave {
+  from { transform: translateX(0); }
+  to { transform: translateX(1000px); }
+}
+
+/* Glass Inner Refraction */
+.jar-body-glass {
+  fill: rgba(255, 255, 255, 0.05);
+  stroke: rgba(255, 255, 255, 0.4);
+  stroke-width: 1.5;
+}
+
+.honey-fill-v4 {
+  transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.honey-drop {
+  animation: drip 8s infinite ease-in;
+}
+
+.drop-1 { animation-delay: 0s; }
+.drop-2 { animation-delay: 2.5s; }
+.drop-3 { animation-delay: 5s; }
+
+@keyframes drip {
+  0% { transform: translateY(0) scale(1); opacity: 0; }
+  10% { opacity: 1; }
+  80% { transform: translateY(100px) scale(0.8); opacity: 1; }
+  100% { transform: translateY(150px) scale(0.5); opacity: 0; }
+}
+
+.honey-droplets-rain {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.honey-droplet {
+  position: absolute;
+  width: 8px;
+  height: 12px;
+  background: radial-gradient(circle at 50% 30%, #ffeb3b 0%, #ff9900 100%);
+  border-radius: 50% 50% 40% 40%;
+  filter: drop-shadow(0 0 5px rgba(255, 191, 0, 0.6));
+  opacity: 0;
+}
+
+/* Droplets falling from various top positions into the center lid */
+.d-one { left: 30%; top: -20px; animation: fall-into-lid 3s infinite ease-in; animation-delay: 0.2s; }
+.d-two { left: 45%; top: -20px; animation: fall-into-lid 2.5s infinite ease-in; animation-delay: 1.2s; }
+.d-three { left: 60%; top: -20px; animation: fall-into-lid 3.5s infinite ease-in; animation-delay: 0.8s; }
+.d-four { left: 20%; top: -20px; animation: fall-into-lid 4s infinite ease-in; animation-delay: 2s; }
+.d-five { left: 75%; top: -20px; animation: fall-into-lid 3.2s infinite ease-in; animation-delay: 1.5s; }
+.d-six { left: 50%; top: -20px; animation: fall-into-lid 2.8s infinite ease-in; animation-delay: 0.5s; }
+
+@keyframes fall-into-lid {
+  0% { 
+    transform: translateY(0) translateX(0) scale(1); 
+    opacity: 0; 
+  }
+  20% { 
+    opacity: 0.8; 
+  }
+  80% {
+    opacity: 1;
+  }
+  100% { 
+    /* Targeting the jar lid area (center, slightly below top) */
+    transform: translateY(110px) translateX(calc(50% - var(--left-offset, 0px))) scale(0.3);
+    opacity: 0; 
+  }
+}
+
+/* Refined logic to converge towards center */
+.d-one { --left-offset: -20%; }
+.d-two { --left-offset: -5%; }
+.d-three { --left-offset: 10%; }
+.d-four { --left-offset: -30%; }
+.d-five { --left-offset: 25%; }
+.d-six { --left-offset: 0%; }
+.harvest-stats-card {
+  padding: 20px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.honey-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #888;
+}
+
+.info-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffbf00;
+}
+
+.harvest-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  font-style: italic;
+}
+
+.harvest-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ad-reward-button {
+  --background: linear-gradient(135deg, #ffbf00, #ff9900);
+  --color: #000;
+  --border-radius: 16px;
+  height: 56px;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+@keyframes flyone {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(30px, -80px); }
+}
+
+@keyframes flytwo {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-40px, -100px); }
+}
+
+@keyframes fly3 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(50px, -60px); }
+}
+
+@keyframes fly4 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-30px, -90px); }
+}
+
+@keyframes fly5 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(40px, 30px); }
+}
+
+@keyframes fly6 {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-20px, 70px); }
 }
 
 .nectar-content {
