@@ -158,6 +158,14 @@
               <ion-icon :icon="shieldCheckmarkOutline" slot="start"></ion-icon>
               <ion-label>Privacy & Security</ion-label>
             </ion-item>
+            <ion-item button v-if="!userData?.email" @click="handleLinkGoogle" class="connect-google-item">
+              <ion-icon :icon="logoGoogle" slot="start" color="primary"></ion-icon>
+              <ion-label>
+                <h2>Connect to Gmail</h2>
+                <p>Secure your identity</p>
+              </ion-label>
+              <ion-badge slot="end" color="danger" mode="ios" class="notif-pulse">IMPORTANT</ion-badge>
+            </ion-item>
             <ion-item>
               <ion-icon :icon="isDarkMode ? moonOutline : sunnyOutline" slot="start"></ion-icon>
               <ion-label>
@@ -341,6 +349,23 @@
 
           <div class="settings-content glass-panel">
             <div v-if="!isChangingPassword">
+               <!-- Account Linking -->
+               <div class="account-linking-section" style="margin-bottom: 20px;">
+                 <h3 class="form-title" style="text-align: left; margin-bottom: 12px;">ACCOUNT CONNECTION</h3>
+                 <div v-if="userData?.email" class="email-status-box glass-panel">
+                   <ion-icon :icon="checkmarkCircleOutline" color="success"></ion-icon>
+                   <div class="email-details">
+                     <span class="email-label">Connected Email</span>
+                     <span class="email-address">{{ userData.email }}</span>
+                   </div>
+                 </div>
+                 <ion-button v-else expand="block" fill="solid" color="primary" @click="handleLinkGoogle" :disabled="isLinking">
+                    <ion-icon :icon="shareOutline" slot="start"></ion-icon>
+                    <span v-if="!isLinking">CONNECT TO GOOGLE</span>
+                    <ion-spinner v-else name="crescent" color="dark"></ion-spinner>
+                 </ion-button>
+               </div>
+
                <ion-button expand="block" fill="outline" color="primary" @click="isChangingPassword = true">
                  Change Password
                </ion-button>
@@ -519,7 +544,7 @@ import {
     trophyOutline, podiumOutline, syncOutline,
     eye, eyeOff, lockClosedOutline, chevronForwardOutline,
     documentTextOutline, downloadOutline, shareOutline, personOutline,
-    chatbubbleEllipsesOutline
+    chatbubbleEllipsesOutline, logoGoogle
 } from 'ionicons/icons';
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -537,7 +562,8 @@ import html2canvas from 'html2canvas';
 const { deviceToken } = usePushService();
 const { 
     userBeeId, saveUserProfile, getAllBees, getFriends, 
-    deleteUserAccount, clearLocalData, getUserProfile, updateOnlineStatus 
+    deleteUserAccount, clearLocalData, getUserProfile, updateOnlineStatus,
+    connectToGoogle
 } = useUserService();
 const { saveHistoryEnabled, toggleHistory } = useBuzzService();
 const { isDarkMode, applyTheme } = useThemeService();
@@ -650,6 +676,7 @@ const showOldPass = ref(false);
 const showNewPass = ref(false);
 const showConfirmPass = ref(false);
 const isUpdatingPass = ref(false);
+const isLinking = ref(false);
 const userData = ref<any>(null);
 
 const localCustomization = reactive({
@@ -769,6 +796,34 @@ const doSaveId = async () => {
 
 const openFeedbackForm = () => {
   window.open('https://docs.google.com/forms/d/e/1FAIpQLSe9Xujo4tHVL6XppNazeiTfpLzhZSPNGZ0C3GUjVOW8hbDX7g/viewform?usp=publish-editor', '_system');
+};
+
+const handleLinkGoogle = async () => {
+    isLinking.value = true;
+    try {
+        await connectToGoogle();
+        const toast = await toastController.create({
+            message: 'Account linked to Google successfully! 🛡️',
+            duration: 3000,
+            color: 'primary',
+            position: 'top'
+        });
+        await toast.present();
+        
+        // Refresh profile data
+        if (userBeeId.value) {
+            userData.value = await getUserProfile(userBeeId.value);
+        }
+    } catch (e: any) {
+        const alert = await alertController.create({
+            header: 'Linking Failed',
+            message: e.message || 'Could not connect to Google.',
+            buttons: ['OK']
+        });
+        await alert.present();
+    } finally {
+        isLinking.value = false;
+    }
 };
 
 const handleVerifyAccess = async () => {
@@ -909,8 +964,8 @@ const handleRefresh = async (event: CustomEvent) => {
     }
 };
 
-const logout = () => {
-    clearLocalData();
+const logout = async () => {
+    await clearLocalData();
     router.push('/onboarding');
 };
 </script>
@@ -1475,5 +1530,54 @@ ion-toolbar {
   height: 1px;
   background: rgba(255, 255, 255, 0.1);
   margin: 15px 0;
+}
+
+.email-status-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.email-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.email-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--ion-color-medium);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.email-address {
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+}
+
+.notif-pulse {
+  animation: pulse-red 2s infinite;
+  box-shadow: 0 0 0 0 rgba(var(--ion-color-danger-rgb), 0.7);
+}
+
+@keyframes pulse-red {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(var(--ion-color-danger-rgb), 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(var(--ion-color-danger-rgb), 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(var(--ion-color-danger-rgb), 0);
+  }
 }
 </style>

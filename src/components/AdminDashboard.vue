@@ -485,7 +485,7 @@ const handleLogout = async () => {
     message: 'Exit the Hive Control Center?',
     buttons: [
       { text: 'Cancel', role: 'cancel' },
-      { text: 'Logout', role: 'destructive', handler: () => clearLocalData() }
+      { text: 'Logout', role: 'destructive', handler: async () => { await clearLocalData(); } }
     ]
   });
   await alert.present();

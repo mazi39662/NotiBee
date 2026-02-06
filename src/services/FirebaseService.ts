@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
-import { getAuth, signInAnonymously } from 'firebase/auth';
+import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, linkWithPopup, EmailAuthProvider } from 'firebase/auth';
 
 const firebaseConfig = {
     apiKey: "AIzaSyBIUIq5EW5kwIyz856M4p_7t0IEckSe6Hw",
@@ -27,7 +27,9 @@ export const storage = getStorage(app);
 
 export const initFirebase = async () => {
     try {
-        await signInAnonymously(auth);
+        if (!auth.currentUser) {
+            await signInAnonymously(auth);
+        }
     } catch (e) {
         console.error('Firebase Auth Error', e);
     }

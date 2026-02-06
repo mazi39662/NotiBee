@@ -79,7 +79,12 @@
               <ion-icon :icon="addCircleOutline" slot="end"></ion-icon>
             </ion-button>
             <div class="divider">OR</div>
-            <ion-button expand="block" fill="outline" color="primary" :disabled="!agreedToTerms" @click="goToLogin" class="action-btn">
+            <ion-button expand="block" fill="outline" color="secondary" :disabled="!agreedToTerms" @click="handleGoogleLogin" class="action-btn google-btn">
+              CONTINUE WITH GOOGLE
+              <ion-icon :icon="logoGoogle" slot="end"></ion-icon>
+            </ion-button>
+            <div class="divider">OR</div>
+            <ion-button expand="block" fill="clear" color="medium" :disabled="!agreedToTerms" @click="goToLogin" class="action-btn">
               CLAIM EXISTING ID
               <ion-icon :icon="logInOutline" slot="end"></ion-icon>
             </ion-button>
@@ -110,12 +115,14 @@ import {
 } from '@ionic/vue';
 import { 
   arrowForward, flash, locationOutline, 
-  shieldCheckmarkOutline, addCircleOutline, logInOutline 
+  shieldCheckmarkOutline, addCircleOutline, logInOutline, logoGoogle 
 } from 'ionicons/icons';
 import { useRouter } from 'vue-router';
 import { ref, onMounted } from 'vue';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import HiveSplash from '@/components/HiveSplash.vue';
+import { useUserService } from '@/services/UserService';
+import { alertController } from '@ionic/vue';
 
 const router = useRouter();
 const showSplash = ref(true);
@@ -146,6 +153,38 @@ const goToCreate = () => {
 
 const goToLogin = () => {
   router.push('/rejoin-hive'); 
+};
+
+const { googleLogin } = useUserService();
+
+const handleGoogleLogin = async () => {
+  Haptics.impact({ style: ImpactStyle.Heavy });
+  showSplash.value = true;
+  try {
+    const result = await googleLogin();
+    if (result.newUser) {
+      // Pass the suggested beeId or email to create account
+      router.push({
+        path: '/create-id',
+        query: { 
+          email: result.email, 
+          suggestedId: result.displayName?.replace(/\s+/g, '').toLowerCase(),
+          isGoogle: 'true'
+        }
+      });
+    } else {
+      router.replace('/tabs/tab1');
+    }
+  } catch (error: any) {
+    const alert = await alertController.create({
+      header: 'Google Login Error',
+      message: error.message || 'Could not sign in with Google.',
+      buttons: ['OK']
+    });
+    await alert.present();
+  } finally {
+    showSplash.value = false;
+  }
 };
 </script>
 
@@ -321,9 +360,15 @@ p {
 
 .action-btn {
   --border-radius: 16px;
-  height: clamp(50px, 12vw, 64px);
+  height: clamp(50px, 12vw, 56px);
   font-weight: 800;
-  font-size: clamp(0.8rem, 3.5vw, 1rem);
+  font-size: clamp(0.8rem, 3.5vw, 0.9rem);
+  margin-bottom: 8px;
+}
+
+.google-btn {
+  --border-color: #4285F4;
+  --color: #4285F4;
 }
 
 .divider {

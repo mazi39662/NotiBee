@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import { db, auth } from './FirebaseService';
+import { GoogleAuthProvider, signInWithPopup, linkWithPopup } from 'firebase/auth';
 import { doc, getDoc, setDoc, query, collection, orderBy, limit, onSnapshot, updateDoc, arrayUnion, deleteDoc, addDoc, arrayRemove, where, getCountFromServer, startAfter, getDocs, Timestamp, writeBatch } from 'firebase/firestore';
 import bcrypt from 'bcryptjs';
 
@@ -9,7 +10,7 @@ export const userRole = ref<string | null>(localStorage.getItem('bee_role')); //
 
 export const useUserService = () => {
 
-    const saveUserProfile = async (beeId: string, token: string | null, isLogin = false, password?: string) => {
+    const saveUserProfile = async (beeId: string, token: string | null, isLogin = false, password?: string, email?: string) => {
         // 1. Wait for Auth
         if (!auth.currentUser) {
             await new Promise((resolve) => {
@@ -34,9 +35,10 @@ export const useUserService = () => {
                 throw new Error('This Bee ID is already claimed by another bee!');
             }
 
-            // Require password on initial registration
+            // Require password on initial registration (unless linked to Google/etc)
             if (!snap.exists()) {
-                if (!password || password.length < 4) {
+                const isGoogleUser = auth.currentUser.providerData.some(p => p.providerId === 'google.com');
+                if (!isGoogleUser && (!password || password.length < 4)) {
                     throw new Error('Please set a password (min 4 characters).');
                 }
             } else if (password && userData && !isOwner) {
@@ -75,7 +77,8 @@ export const useUserService = () => {
             pushToken: token || userData?.pushToken || null,
             lastSeen: new Date().toISOString(),
             createdAt: userData?.createdAt || new Date().toISOString(), // Persist or set new
-            visibility: userData?.visibility ?? true // Default to visible
+            visibility: userData?.visibility ?? true, // Default to visible
+            email: email || userData?.email || auth.currentUser.email || null
         };
 
         // Only update password during registration or if provided
@@ -109,6 +112,68 @@ export const useUserService = () => {
         userBeeId.value = beeId;
         userVisibility.value = userData?.visibility ?? true;
         return true;
+    };
+
+    const googleLogin = async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            // Find if any user document has this UID
+            const q = query(collection(db, 'users'), where('uid', '==', user.uid), limit(1));
+            const snap = await getDocs(q);
+
+            if (!snap.empty) {
+                const userData = snap.docs[0].data();
+                const beeId = userData.beeId;
+
+                localStorage.setItem('bee_id', beeId);
+                if (userData.role) {
+                    localStorage.setItem('bee_role', userData.role);
+                    userRole.value = userData.role;
+                }
+                userBeeId.value = beeId;
+                userVisibility.value = userData.visibility ?? true;
+                return { newUser: false, beeId };
+            } else {
+                // No account found for this UID
+                return {
+                    newUser: true,
+                    email: user.email,
+                    displayName: user.displayName,
+                    uid: user.uid
+                };
+            }
+        } catch (error: any) {
+            console.error('Google Login Error:', error);
+            throw error;
+        }
+    };
+
+    const connectToGoogle = async () => {
+        if (!auth.currentUser) throw new Error('Not authenticated');
+        const provider = new GoogleAuthProvider();
+        try {
+            // Link the current anonymous/email account with Google
+            const result = await linkWithPopup(auth.currentUser, provider);
+            const user = result.user;
+
+            if (userBeeId.value) {
+                const userDoc = doc(db, 'users', userBeeId.value);
+                await updateDoc(userDoc, {
+                    email: user.email,
+                    googleLinked: true
+                });
+            }
+            return true;
+        } catch (error: any) {
+            console.error('Error linking Google account:', error);
+            if (error.code === 'auth/credential-already-in-use') {
+                throw new Error('This Google account is already linked to another Bee ID.');
+            }
+            throw error;
+        }
     };
 
     const updateOnlineStatus = async () => {
@@ -277,7 +342,8 @@ export const useUserService = () => {
         }
     };
 
-    const clearLocalData = () => {
+    const clearLocalData = async () => {
+        await auth.signOut();
         localStorage.clear();
         sessionStorage.clear();
         userBeeId.value = null;
@@ -610,6 +676,8 @@ export const useUserService = () => {
         demoteFromAdmin,
         getAdminAnalytics,
         getPagedUsers,
-        reportUser
+        reportUser,
+        googleLogin,
+        connectToGoogle
     };
 };

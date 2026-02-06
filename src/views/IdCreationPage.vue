@@ -15,8 +15,19 @@
         </div>
 
         <div class="input-section animate-in" style="animation-delay: 0.3s">
-          <div class="pro-input-container gold-glow-soft">
-            <label class="pro-label">{{ isLogin ? 'YOUR BEE ID' : 'SET YOUR BEE ID' }}</label>
+          <div v-if="!isLogin" class="pro-input-container gold-glow-soft">
+            <label class="pro-label">YOUR EMAIL</label>
+            <ion-input 
+              type="email"
+              placeholder="bee@hive.com" 
+              v-model="email"
+              class="pro-input"
+              @keyup.enter="handleCreate"
+            ></ion-input>
+          </div>
+
+          <div class="pro-input-container gold-glow-soft mt-16">
+            <label class="pro-label">{{ isLogin ? 'YOUR BEE ID' : 'CHOOSE BEE ID' }}</label>
             <ion-input 
               placeholder="e.g. HoneyKing" 
               v-model="beeId"
@@ -25,7 +36,7 @@
             ></ion-input>
           </div>
 
-          <div class="pro-input-container gold-glow-soft mt-16">
+          <div v-if="!isGoogle" class="pro-input-container gold-glow-soft mt-16">
             <label class="pro-label">{{ isLogin ? 'ENTER PASSWORD' : 'SET A PASSWORD' }}</label>
             <div class="password-wrapper">
               <ion-input 
@@ -43,7 +54,7 @@
             </div>
           </div>
 
-          <div v-if="!isLogin" class="pro-input-container gold-glow-soft mt-16">
+          <div v-if="!isGoogle && !isLogin" class="pro-input-container gold-glow-soft mt-16">
             <label class="pro-label">CONFIRM PASSWORD</label>
             <div class="password-wrapper">
               <ion-input 
@@ -61,7 +72,8 @@
             </div>
           </div>
           
-          <p class="input-footer">Letters and numbers only. No spaces.</p>
+          <p v-if="!isGoogle" class="input-footer">Letters and numbers only. No spaces.</p>
+          <p v-else class="input-footer">Choose your unique Bee ID to complete your Google setup.</p>
 
           <ion-button 
             expand="block" 
@@ -77,7 +89,7 @@
             <ion-spinner v-else name="crescent" color="dark"></ion-spinner>
           </ion-button>
 
-          <p class="login-link animate-in" style="animation-delay: 0.5s">
+          <p v-if="!isGoogle" class="login-link animate-in" style="animation-delay: 0.5s">
             <span v-if="!isLogin" @click="isLogin = true">I already have a Bee ID</span>
             <span v-else @click="isLogin = false">I want a NEW identity</span>
           </p>
@@ -103,6 +115,7 @@ const { saveUserProfile } = useUserService();
 const { deviceToken } = usePushService();
 
 const beeId = ref('');
+const email = ref('');
 const password = ref('');
 const confirmPassword = ref('');
 const showPassword = ref(false);
@@ -110,16 +123,29 @@ const showConfirmPassword = ref(false);
 const isSaving = ref(false);
 const showSplash = ref(true);
 const isLogin = ref(false);
+const isGoogle = ref(false);
 
 onMounted(() => {
+  const query = router.currentRoute.value.query;
+  if (query.isGoogle === 'true') {
+    isGoogle.value = true;
+    if (query.suggestedId) {
+      beeId.value = query.suggestedId as string;
+    }
+    if (query.email) {
+      email.value = query.email as string;
+    }
+  }
   setTimeout(() => showSplash.value = false, 1000);
 });
 
 const handleCreate = async () => {
-  if (!beeId.value || !password.value || isSaving.value) return;
-  if (!isLogin.value && !confirmPassword.value) return;
+  if (!beeId.value || isSaving.value) return;
+  if (!isLogin.value && !email.value && !isGoogle.value) return;
+  if (!isGoogle.value && !password.value) return;
+  if (!isLogin.value && !isGoogle.value && !confirmPassword.value) return;
 
-  if (!isLogin.value && password.value !== confirmPassword.value) {
+  if (!isGoogle.value && !isLogin.value && password.value !== confirmPassword.value) {
     const alert = await alertController.create({
       header: 'Mismatch',
       message: 'Passwords do not match.',
@@ -141,7 +167,7 @@ const handleCreate = async () => {
     return;
   }
 
-  if (password.value.length < 4) {
+  if (!isGoogle.value && password.value.length < 4) {
     const alert = await alertController.create({
       header: 'Weak Password',
       message: 'Password must be at least 4 characters long.',
@@ -155,7 +181,7 @@ const handleCreate = async () => {
   showSplash.value = true;
 
   try {
-    await saveUserProfile(cleanId, deviceToken.value || null, isLogin.value, password.value);
+    await saveUserProfile(cleanId, deviceToken.value || null, isLogin.value, password.value, email.value);
     Haptics.impact({ style: ImpactStyle.Heavy });
     router.replace('/tabs/tab1');
   } catch (e: any) {
@@ -215,10 +241,10 @@ const handleCreate = async () => {
 }
 
 h1 {
-  font-size: clamp(1.5rem, 6vw, 2.2rem);
+  font-size: clamp(1.3rem, 5vw, 1.8rem);
   font-weight: 800;
   color: var(--ion-text-color);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 p {
@@ -253,7 +279,7 @@ p {
   --color: var(--ion-text-color);
   --placeholder-color: var(--ion-color-medium);
   --placeholder-opacity: 1;
-  font-size: clamp(1.5rem, 8vw, 2.5rem);
+  font-size: clamp(1.1rem, 5vw, 1.4rem);
   font-weight: 800;
   text-align: center;
   width: 100%;
@@ -287,7 +313,7 @@ p {
 }
 
 .password-input {
-  font-size: 24px !important;
+  font-size: 1.4rem !important;
 }
 
 .eye-icon {
