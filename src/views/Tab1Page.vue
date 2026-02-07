@@ -339,7 +339,10 @@
                     v-for="notif in sortedNotifications" 
                     :key="notif.id" 
                     class="request-card glass-panel"
-                    :class="{ 'unread-notif': !notif.read }"
+                    :class="{ 
+                      'unread-notif': !notif.read,
+                      'pulsing-aura-premium': notif.type === 'ACHIEVEMENT' && !notif.read 
+                    }"
                     @click="handleNotifClick(notif)"
                   >
                       <div class="request-info">
