@@ -151,6 +151,18 @@
                 <!-- Text Story -->
                 <div v-else class="card-text-story" :style="{ backgroundColor: story.backgroundColor || '#ffbf00' }">
                   <p>{{ story.textContent }}</p>
+                  
+                  <!-- Anonymous Invite Button -->
+                  <div v-if="'isAnonymousInvite' in story && story.isAnonymousInvite" class="anonymous-invite-button-container">
+                    <ion-button 
+                      expand="block" 
+                      color="light" 
+                      class="secret-msg-btn"
+                      @click.stop="router.push(`/tabs/anonymous-send/${story.beeId}`)"
+                    >
+                      SEND SECRET MESSAGE 🤫
+                    </ion-button>
+                  </div>
                 </div>
               </div>
 
@@ -2283,6 +2295,30 @@ ion-segment-button {
   min-height: 38px;
   text-transform: none;
   letter-spacing: 0.5px;
+}
+
+.anonymous-invite-button-container {
+  margin-top: 24px;
+  width: 100%;
+}
+
+.secret-msg-btn {
+  --border-radius: 14px;
+  --color: black;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 1px;
+  margin: 0;
+  height: 52px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.card-text-story {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 24px;
 }
 
 h3 {

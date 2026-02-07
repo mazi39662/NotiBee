@@ -169,8 +169,14 @@ export const useBuzzService = () => {
           try {
             if (data.from !== beeId) {
               if (data.type === 'REACTION') {
-                updateLocalReaction(data.msgId, data.emoji, data.from);
-              } else if (data.type === 'READ_RECEIPT') {
+                if (data.msgId) updateLocalReaction(data.msgId, data.emoji, data.from);
+
+                // If it has a message (anonymous reaction), show in notifications
+                if (data.message && notifyService) {
+                  notifyService.addNotification(data.from, data.message, 'REACTION');
+                }
+              }
+              else if (data.type === 'READ_RECEIPT') {
                 updateLocalMessageStatus(data.msgId, 'read');
               } else {
                 // 1. ADD TO HISTORY FIRST - Crucial for immediate UI update

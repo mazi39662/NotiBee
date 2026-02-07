@@ -658,6 +658,12 @@ export const useUserService = () => {
         }, { merge: true });
     };
 
+    const updateAnonymousLinkExpiry = async (expiry: number | null) => {
+        if (!userBeeId.value) return;
+        const userDoc = doc(db, 'users', userBeeId.value);
+        await updateDoc(userDoc, { anonymousLinkExpiry: expiry });
+    };
+
     return {
         userBeeId,
         userVisibility,
@@ -694,6 +700,7 @@ export const useUserService = () => {
         getPagedUsers,
         reportUser,
         googleLogin,
-        connectToGoogle
+        connectToGoogle,
+        updateAnonymousLinkExpiry
     };
 };

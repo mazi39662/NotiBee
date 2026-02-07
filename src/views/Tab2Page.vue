@@ -10,8 +10,8 @@
       <div class="lab-container">
         <!-- Lab Header -->
         <div class="lab-header animate-in">
-          <div class="lab-badge">BUZZ LAB</div>
-          <h1>Experimental <span class="highlight">Zone</span></h1>
+
+          <h1>Buzz <span class="highlight">Lab</span></h1>
           <p>Discover new ways to interact with the colony.</p>
         </div>
 
@@ -28,7 +28,10 @@
               <ion-icon :icon="card.icon"></ion-icon>
             </div>
             <div class="card-content">
-              <h3>{{ card.title }}</h3>
+              <h3>
+                {{ card.title }}
+                <span v-if="card.isNew" class="new-badge">NEW</span>
+              </h3>
               <p>{{ card.description }}</p>
             </div>
             <div class="card-arrow">
@@ -54,8 +57,10 @@ import {
 import { 
   chevronForwardOutline, flaskOutline, trophyOutline, 
   locationOutline, personOutline, alarmOutline, 
-  shieldOutline, starOutline, colorPaletteOutline
+  shieldOutline, starOutline, colorPaletteOutline,
+  mailUnreadOutline
 } from 'ionicons/icons';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useUserService } from '@/services/UserService';
@@ -63,7 +68,15 @@ import { useUserService } from '@/services/UserService';
 const router = useRouter();
 const { isAdmin } = useUserService();
 
-const labCards = [
+const labCards = ref<any[]>([
+  {
+    title: 'BuzzMe',
+    description: 'Secret Messages for you.',
+    icon: mailUnreadOutline,
+    path: '/tabs/anonymous-inbox',
+    color: 'rgba(255, 0, 212, 0.1)',
+    isNew: true
+  },
   {
     title: 'Bee Radar',
     description: 'Find bees buzzing near your location.',
@@ -72,37 +85,16 @@ const labCards = [
     color: 'rgba(255, 191, 0, 0.1)'
   },
   {
-    title: 'Achievements',
-    description: 'Track your milestones and rewards.',
-    icon: starOutline,
-    path: '/tabs/achievements',
-    color: 'rgba(255, 68, 68, 0.1)'
-  },
-  {
-    title: 'Leaderboard',
-    description: 'See the top buzzing bees in the colony.',
-    icon: trophyOutline,
-    path: '/tabs/leaderboard',
-    color: 'rgba(0, 212, 255, 0.1)'
-  },
-  {
-    title: 'Bee Customizer',
-    description: 'Evolve your bee with new skins.',
-    icon: colorPaletteOutline,
-    path: '/tabs/customize-bee',
-    color: 'rgba(128, 0, 255, 0.1)'
-  },
-  {
     title: 'Buzz Reminders',
     description: 'Never miss a buzz. Set your alerts.',
     icon: alarmOutline,
     path: '/tabs/reminders',
     color: 'rgba(0, 255, 128, 0.1)'
   }
-];
+]);
 
 if (isAdmin.value) {
-  labCards.push({
+  labCards.value.push({
     title: 'Admin Hub',
     description: 'System-level controls and insights.',
     icon: shieldOutline,
@@ -237,6 +229,19 @@ const navigate = (path: string) => {
   font-weight: 800;
   color: white;
   letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.new-badge {
+  font-size: 8px;
+  background: var(--ion-color-primary);
+  color: black;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 900;
+  letter-spacing: 1px;
 }
 
 .card-content p {

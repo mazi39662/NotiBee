@@ -3,12 +3,12 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 import { getAuth, signInAnonymously, GoogleAuthProvider, signInWithPopup, linkWithPopup, EmailAuthProvider } from 'firebase/auth';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBIUIq5EW5kwIyz856M4p_7t0IEckSe6Hw",
-    authDomain: "notibee-441b2.firebaseapp.com",
-    projectId: "notibee-441b2",
-    storageBucket: "notibee-441b2.firebasestorage.app",
-    messagingSenderId: "119747383801",
-    appId: "1:119747383801:web:placeholder"
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);

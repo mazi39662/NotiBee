@@ -45,6 +45,7 @@ export interface Story {
     likes: string[]; // Array of beeIds who liked
     views: string[]; // Array of beeIds who viewed
     comments?: Comment[]; // Optional array of comments
+    isAnonymousInvite?: boolean; // New: Flag for anonymous message invites
 }
 
 export type FeedItem = Story | Ad;
@@ -285,6 +286,43 @@ export function useMyDaysService() {
     };
 
     /**
+     * Create an anonymous message invite story
+     */
+    const createAnonymousStory = async (customMessage?: string): Promise<void> => {
+        if (!currentUserBeeId) throw new Error('No Bee ID found');
+
+        try {
+            isLoading.value = true;
+            const now = Date.now();
+            const expiresAt = now + (24 * 60 * 60 * 1000); // 24 hours from now
+
+            const text = customMessage || 'Send me anonymous messages!';
+            const finalMessage = text.includes('🤫') || text.includes('✨') ? text : `${text} 🤫✨`;
+
+            // Save to Firestore
+            await addDoc(collection(db, 'stories'), {
+                beeId: currentUserBeeId,
+                textContent: finalMessage,
+                backgroundColor: 'linear-gradient(135deg, #181818 0%, #000 100%)',
+                isAnonymousInvite: true,
+                createdAt: Timestamp.fromMillis(now),
+                expiresAt: Timestamp.fromMillis(expiresAt),
+                likes: [],
+                views: [],
+                comments: []
+            });
+
+            // Refresh stories
+            await fetchStories();
+        } catch (error: any) {
+            console.error('Error creating anonymous story:', error);
+            throw error;
+        } finally {
+            isLoading.value = false;
+        }
+    };
+
+    /**
      * Fetch all active stories (not expired)
      */
     const fetchStories = async (isLoadMore = false): Promise<void> => {
@@ -350,7 +388,8 @@ export function useMyDaysService() {
                     expiresAt: data.expiresAt.toMillis(),
                     likes: data.likes || [],
                     views: data.views || [],
-                    comments: data.comments || []
+                    comments: data.comments || [],
+                    isAnonymousInvite: data.isAnonymousInvite || false
                 });
             });
 
@@ -434,7 +473,8 @@ export function useMyDaysService() {
                     expiresAt: data.expiresAt.toMillis(),
                     likes: data.likes || [],
                     views: data.views || [],
-                    comments: data.comments || []
+                    comments: data.comments || [],
+                    isAnonymousInvite: data.isAnonymousInvite || false
                 });
             });
 
@@ -714,7 +754,8 @@ export function useMyDaysService() {
                     expiresAt: data.expiresAt.toMillis(),
                     likes: data.likes || [],
                     views: data.views || [],
-                    comments: data.comments || []
+                    comments: data.comments || [],
+                    isAnonymousInvite: data.isAnonymousInvite || false
                 };
             });
 
@@ -847,31 +888,55 @@ export function useMyDaysService() {
         return result;
     });
 
+    const disableAnonymousLink = async (): Promise<void> => {
+        if (!currentUserBeeId) return;
+        try {
+            const q = query(
+                collection(db, 'stories'),
+                where('beeId', '==', currentUserBeeId)
+            );
+            const snapshot = await getDocs(q);
+            const deletePromises = snapshot.docs
+                .filter(doc => doc.data().isAnonymousInvite === true)
+                .map(storyDoc => deleteDoc(storyDoc.ref));
+            await Promise.all(deletePromises);
+
+            // Refresh local state
+            await fetchStories();
+        } catch (error) {
+            console.error('Error disabling anonymous link:', error);
+            throw error;
+        }
+    };
+
     return {
         stories,
         myStories,
         isLoading,
-        createStory,
+        hasMore,
+        PAGE_SIZE,
         createTextStory,
-        createAudioStory,
+        createStory,
         uploadStory,
         batchUploadStories,
+        createAudioStory,
+        createAnonymousStory,
         fetchStories,
-        fetchUserStories,
+        initStoriesListener,
         deleteExpiredStories,
         deleteStory,
-        adminDeleteStory,
         likeStory,
         unlikeStory,
         markAsViewed,
         addComment,
         reactToComment,
         getStoriesByUser,
-        initStoriesListener,
         hasLiked,
-        hasMore,
         getTimeRemaining,
+        fetchUserStories,
         reportStory,
+        adminDeleteStory,
+        disableAnonymousLink,
         integratedStories
     };
 }

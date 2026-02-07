@@ -175,3 +175,48 @@ body.barcode-scanner-active .barcode-scanner-modal {
 .update-alert .update-button-cancel {
   color: #666 !important;
 }
+
+/* Danger Alert Styling */
+.danger-alert .alert-wrapper {
+  background: #0d0d0d !important;
+  border: 1px solid #ff4444 !important;
+  border-radius: 20px !important;
+  box-shadow: 0 0 25px rgba(255, 68, 68, 0.2) !important;
+}
+
+.danger-alert .alert-title {
+  color: #ff4444 !important;
+  font-weight: 900 !important;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.danger-alert .alert-message {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+}
+
+.danger-alert .alert-head {
+  text-align: center !important;
+  padding-bottom: 20px !important;
+}
+
+.danger-alert .alert-button-inner {
+  font-weight: 800 !important;
+}
+
+/* Custom NotiBee Toast */
+.notibee-toast {
+  --background: var(--ion-color-primary);
+  --color: #000;
+  --border-radius: 16px;
+  --button-color: #000;
+  font-weight: 800;
+  text-align: center;
+}
+
+.notibee-toast::part(message) {
+  font-size: 14px;
+  letter-spacing: -0.2px;
+}

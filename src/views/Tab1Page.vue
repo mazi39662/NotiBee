@@ -59,12 +59,6 @@
               <div @click="router.push('/tabs/leaderboard')" class="nest-notif-btn secondary-btn">
                 <ion-icon :icon="trophyOutline" class="radar-header-icon"></ion-icon>
               </div>
-              <div v-if="isAdmin" @click="router.push('/tabs/admin')" class="nest-notif-btn secondary-btn">
-                <ion-icon :icon="shieldOutline" class="radar-header-icon"></ion-icon>
-              </div>
-              <div @click="router.push('/tabs/reminders')" class="nest-notif-btn secondary-btn">
-                <ion-icon :icon="alarmOutline" class="radar-header-icon"></ion-icon>
-              </div>
               <div @click="isGardenModalOpen = true" class="nest-notif-btn secondary-btn">
                 <ion-icon :icon="optionsOutline" class="radar-header-icon"></ion-icon>
               </div>

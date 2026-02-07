@@ -76,6 +76,18 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: 'reminders',
         component: () => import('@/views/BuzzRemindersPage.vue')
+      },
+      {
+        path: 'anonymous-inbox',
+        component: () => import('@/views/AnonymousInboxPage.vue')
+      },
+      {
+        path: 'anonymous-setup',
+        component: () => import('@/views/AnonymousLinkPage.vue')
+      },
+      {
+        path: 'anonymous-send/:beeId',
+        component: () => import('@/views/AnonymousSendPage.vue')
       }
     ]
   },
@@ -102,6 +114,17 @@ router.beforeEach((to, from, next) => {
   const hasId = !!userBeeId.value;
   const isAuthPath = ['/onboarding', '/create-id', '/rejoin-hive'].includes(to.path);
   const isPublicPath = to.path === '/legal';
+
+  // 1. Buzz Link Redirect (Handle external visitors to notibee.buzzme/ID)
+  const segments = to.path.split('/').filter(s => s.length > 0);
+  if (segments.length === 1 && !isAuthPath && !isPublicPath && to.path !== '/') {
+    const beeId = segments[0];
+    const reserved = ['tabs', 'onboarding', 'create-id', 'legal', 'rejoin-hive', 'call', 'www'];
+    if (!reserved.includes(beeId.toLowerCase())) {
+      window.location.href = `https://cypherstudio.netlify.app/notibee/${beeId}`;
+      return;
+    }
+  }
 
   if (!hasId && !isAuthPath && !isPublicPath) {
     // Force onboarding if no ID and not on an allowed path

@@ -9,10 +9,29 @@
     <div class="rooms-container">
       <!-- New Fun Header -->
       <!-- New Fun Header Removed -->
-      <!-- <div class="colony-hub-header animate-in">
+      <div class="colony-hub-header animate-in">
         <div class="hub-badge">HIVE HUB</div>
         <h1>Gather your <span class="highlight">Colony</span></h1>
-      </div> -->
+      </div>
+
+      <!-- Buzz Anonymous Feature Card -->
+      <div 
+        class="anonymous-promo-card glass-panel animate-in gold-glow" 
+        @click="router.push('/tabs/anonymous-setup')"
+      >
+        <div class="promo-content">
+          <div class="promo-icon-wrap">
+            <ion-icon :icon="flaskOutline"></ion-icon>
+          </div>
+          <div class="promo-text">
+            <h3>Secret Nectar</h3>
+            <p>Post an anonymous invite to the hive and get secret blurs.</p>
+          </div>
+        </div>
+        <div class="promo-arrow">
+          <ion-icon :icon="chevronForwardOutline"></ion-icon>
+        </div>
+      </div>
 
       <!-- Loading State -->
       <div v-if="isLoading && rooms.length === 0" class="loading-state">
@@ -186,9 +205,9 @@ import {
 } from '@ionic/vue';
 import { 
   addOutline, peopleOutline, chevronForwardOutline, 
-  homeOutline, alertCircleOutline, searchOutline,
+  homeOutline, alertCircleOutline,  searchOutline, linkOutline,
   trashOutline, logOutOutline, volumeMuteOutline, volumeHighOutline,
-  closeOutline
+  closeOutline, flaskOutline
 } from 'ionicons/icons';
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -410,6 +429,65 @@ const confirmLeaveRoom = async (room: any) => {
   padding: clamp(12px, 4vw, 20px);
   max-width: 600px;
   margin: 0 auto;
+}
+
+.anonymous-promo-card {
+  margin-bottom: 24px;
+  padding: 20px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  background: linear-gradient(135deg, rgba(255, 191, 0, 0.1) 0%, rgba(255, 107, 53, 0.1) 100%);
+  border: 1px solid rgba(255, 191, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.anonymous-promo-card:hover {
+  transform: translateY(-5px);
+  background: linear-gradient(135deg, rgba(255, 191, 0, 0.15) 0%, rgba(255, 107, 53, 0.15) 100%);
+  border-color: rgba(255, 191, 0, 0.3);
+}
+
+.promo-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.promo-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: #ffbf00;
+  color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 0 15px rgba(255, 191, 0, 0.4);
+}
+
+.promo-text h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+}
+
+.promo-text p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.4;
+}
+
+.promo-arrow {
+  color: rgba(255, 191, 0, 0.5);
+  font-size: 20px;
 }
 
 .loading-state, .empty-state {
