@@ -9,10 +9,8 @@
         </ion-tab-button>
 
         <ion-tab-button tab="tab2" href="/tabs/tab2" class="buzz-button nest-tab" @click="playHaptic">
-          <div class="custom-nest-icon">
-            <img src="/assets/nest.png" alt="Rooms" />
-          </div>
-          <ion-label>Hive</ion-label>
+          <ion-icon aria-hidden="true" :icon="flaskOutline" />
+          <ion-label>BuzzLab</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="my-days" href="/tabs/my-days" class="days-button" @click="playHaptic">
@@ -31,7 +29,7 @@
 
 <script setup lang="ts">
 import { IonTabBar, IonTabButton, IonTabs, IonLabel, IonIcon, IonPage, IonRouterOutlet } from '@ionic/vue';
-import { flowerOutline, waterOutline, settingsOutline } from 'ionicons/icons';
+import { flowerOutline, waterOutline, settingsOutline, flaskOutline } from 'ionicons/icons';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { useUserService } from '@/services/UserService';
 

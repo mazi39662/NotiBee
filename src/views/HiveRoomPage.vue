@@ -3,7 +3,9 @@
     <ion-header :translucent="true">
       <ion-toolbar class="room-toolbar">
         <ion-buttons slot="start">
-          <ion-back-button default-href="/tabs/tab2"></ion-back-button>
+          <ion-button @click="goBack">
+            <ion-icon :icon="chevronBackOutline" slot="icon-only"></ion-icon>
+          </ion-button>
         </ion-buttons>
         <ion-title>
           <div class="header-title">
@@ -435,6 +437,8 @@
           </div>
         </div>
       </ion-popover>
+
+
     </ion-content>
   </ion-page>
 </template>
@@ -450,7 +454,8 @@ import {
 import { 
   cameraOutline, paperPlaneOutline, addOutline, chatbubbleOutline, 
   closeOutline, informationCircleOutline, settingsOutline, trashOutline,
-  micOutline, stopOutline, checkmarkDoneOutline, alertCircleOutline, trash
+  micOutline, stopOutline, checkmarkDoneOutline, alertCircleOutline, trash,
+  chevronBackOutline
 } from 'ionicons/icons';
 import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
@@ -484,6 +489,10 @@ const roomId = route.params.id as string;
 const roomService = useRoomService();
 const { deleteRoomBuzz } = roomService;
 const { userBeeId } = useUserService();
+
+const goBack = () => {
+    router.replace('/tabs/tab1?tab=hub');
+};
 const { 
   isRecording, 
   recordingTime, 
@@ -579,6 +588,24 @@ const emojiPickerEvent = ref<any>(null);
 const selectedBuzzForReaction = ref<any>(null);
 const confirmingDelete = ref(false);
 const activeActionSheet = ref<any>(null);
+const assetsLoaded = ref(false);
+const customizationsLoaded = ref(false);
+const isReadyToShowBees = computed(() => assetsLoaded.value && (customizationsLoaded.value || Object.keys(memberCustomizations.value).length > 0));
+const setupBeeTimeouts = ref<any[]>([]);
+
+// Persistent Cache for Member Designs
+const CUSTOMIZATION_CACHE_PREFIX = 'bee_custom_cache_';
+const loadCustomizationCache = (memberIds: string[]) => {
+    memberIds.forEach(id => {
+        const cached = localStorage.getItem(CUSTOMIZATION_CACHE_PREFIX + id);
+        if (cached) {
+            memberCustomizations.value[id] = JSON.parse(cached);
+        }
+    });
+};
+const saveCustomizationCache = (id: string, data: any) => {
+    localStorage.setItem(CUSTOMIZATION_CACHE_PREFIX + id, JSON.stringify(data));
+};
 
 // Dragging Logic
 const draggedBee = ref<BeeState | null>(null);
@@ -769,27 +796,37 @@ const animateBees = (bee: BeeState, isInitial = false) => {
 };
 
 const setupBees = () => {
-    if (!room.value || beeStates.value.length > 0) return;
+    if (!room.value || !isReadyToShowBees.value) return;
+    
+    // 1. Clear any pending setup timeouts to prevent duplication
+    setupBeeTimeouts.value.forEach(t => clearTimeout(t));
+    setupBeeTimeouts.value = [];
+
+    // 2. Clear current states if we are re-syncing
+    beeStates.value = [];
+
     const members = room.value.members || [];
     const hole = getHolePos();
-    
-    beeStates.value = [];
 
     // Staggered emergence with grow effect
     members.forEach((id, index) => {
-        setTimeout(() => {
+        const t = setTimeout(() => {
+            // Final check: don't add if already exists (safeguard)
+            if (beeStates.value.some(b => b.beeId === id)) return;
+
             const newBee: BeeState = {
                 beeId: id,
                 x: hole.x,
                 y: hole.y,
                 speed: 0,
                 isEmerging: true,
-                isOnline: id === userBeeId.value // Default self to online
+                isOnline: id === userBeeId.value, // Default self to online
+                customization: memberCustomizations.value[id]
             };
             beeStates.value.push(newBee);
             
             // Initial pause at the hole, then enter constant loop
-            setTimeout(() => {
+            const moveT = setTimeout(() => {
                 animateBees(newBee, true);
                 
                 // Clear emergence state once movement starts
@@ -797,8 +834,10 @@ const setupBees = () => {
                     newBee.isEmerging = false;
                 }, 1000);
             }, 500);
+            setupBeeTimeouts.value.push(moveT);
 
         }, index * 400); // Faster staggered entry
+        setupBeeTimeouts.value.push(t);
     });
 };
 
@@ -816,6 +855,9 @@ const isOnline = (lastSeen?: string) => {
 // Sync member status
 watch(room, (newRoom) => {
     if (newRoom && newRoom.members?.length > 0) {
+        // Load initial cache for immediate visual design
+        loadCustomizationCache(newRoom.members);
+        
         if (colonyUnsubscribe) colonyUnsubscribe();
         const { members: userDocs, unsubscribe } = useUserService().getColonyMembers(newRoom.members);
         colonyUnsubscribe = unsubscribe;
@@ -824,7 +866,9 @@ watch(room, (newRoom) => {
             data.forEach(m => {
                 // Update member customizations map
                 if (m.beeId) {
-                    memberCustomizations.value[m.beeId] = m.customization || { top: 'none', body: 'none', eyes: 'none' };
+                    const data = m.customization || { top: 'none', body: 'none', eyes: 'none' };
+                    memberCustomizations.value[m.beeId] = data;
+                    saveCustomizationCache(m.beeId, data);
                 }
 
                 const bee = beeStates.value.find(b => b.beeId === m.beeId);
@@ -833,6 +877,11 @@ watch(room, (newRoom) => {
                     if (m.customization) bee.customization = m.customization;
                 }
             });
+            // Mark customizations as loaded once we have data for all members
+            // to ensure no "default" bees emerge.
+            if (data.length >= newRoom.members.length) {
+                customizationsLoaded.value = true;
+            }
         }, { immediate: true });
     }
 }, { immediate: true });
@@ -875,7 +924,42 @@ const keepModalOpen = () => {
     // Keep conversation drawer alive
 };
 
-onMounted(() => {
+const preloadBeeAssets = () => {
+    const eyeAssets = [
+        'angry', 'crying', 'dizzy', 'eh', 'hehe', 'hehehe', 
+        'kawaii', 'meh', 'nonchalant', 'shock', 'smiley', 
+        'square_eye', 'what', 'x_eye'
+    ].map(eye => `/assets/bee assets/eyes/${eye}.png`);
+
+    const assets = [
+        '/assets/bee assets/wing_right.png',
+        '/assets/bee assets/wing_left.png',
+        '/assets/bee assets/bee_body.png',
+        '/assets/bee assets/bee_eyes.png',
+        '/assets/bee assets/eyeglass.png',
+        '/assets/bee assets/shades.png',
+        '/assets/bee assets/hat.png',
+        '/assets/bee assets/cowboyhat.png',
+        '/assets/bee assets/strawhat.png',
+        '/assets/bee assets/crown.png',
+        ...eyeAssets
+    ];
+    
+    const promises = assets.map(src => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = resolve;
+            img.onerror = resolve; // Continue even on error
+        });
+    });
+    
+    return Promise.all(promises);
+};
+
+onMounted(async () => {
+  const startTime = Date.now();
+  
   roomService.fetchRooms();
   // room is a computed so it might not be ready yet
   watch(room, (newVal) => {
@@ -885,9 +969,13 @@ onMounted(() => {
     }
   }, { immediate: true });
   
-  setupBees();
+  // setupBees() will be called when showSplash becomes false
   scrollToBottom();
 
+  // Preload assets
+  await preloadBeeAssets();
+  assetsLoaded.value = true;
+  
   // Add global move listeners for dragging
   window.addEventListener('mousemove', onDragMove);
   window.addEventListener('mouseup', onDragEnd);
@@ -898,10 +986,12 @@ onMounted(() => {
 onUnmounted(() => {
   if (unsubscribeBuzzes) unsubscribeBuzzes();
   if (unsubscribeStories) unsubscribeStories();
-  // Cleanup all bee loops
+  // Cleanup all bee loops and setup timeouts
   beeStates.value.forEach(bee => {
     if (bee.moveTimeout) clearTimeout(bee.moveTimeout);
   });
+  setupBeeTimeouts.value.forEach(t => clearTimeout(t));
+  
   if (colonyUnsubscribe) colonyUnsubscribe();
 
   window.removeEventListener('mousemove', onDragMove);
@@ -911,7 +1001,13 @@ onUnmounted(() => {
 });
 
 watch(room, (newRoom) => {
-    if (newRoom && beeStates.value.length === 0) {
+    if (newRoom && beeStates.value.length === 0 && isReadyToShowBees.value) {
+        setupBees();
+    }
+});
+
+watch(isReadyToShowBees, (ready) => {
+    if (ready) {
         setupBees();
     }
 });
@@ -1451,6 +1547,12 @@ const handleRemoveMember = async (memberId: string) => {
   will-change: transform;
   outline: none;
   -webkit-tap-highlight-color: transparent;
+  animation: bee-fade-in 0.8s ease-out forwards;
+}
+
+@keyframes bee-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .bee-wrapper {

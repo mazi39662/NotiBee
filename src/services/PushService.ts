@@ -122,7 +122,7 @@ export const usePushService = () => {
             // Redirect based on type
             setTimeout(() => {
                 if (type === 'ROOM_BUZZ' && roomId) {
-                    router.push(`/tabs/tab2/room/${roomId}`);
+                    router.push(`/tabs/tab1/room/${roomId}`);
                 } else if (type === 'CALL_REQUEST') {
                     router.push('/call');
                 } else {
@@ -156,7 +156,7 @@ export const usePushService = () => {
 
             setTimeout(() => {
                 if (type === 'ROOM_BUZZ' && roomId) {
-                    router.push(`/tabs/tab2/room/${roomId}`);
+                    router.push(`/tabs/tab1/room/${roomId}`);
                 } else if (type === 'CALL_REQUEST') {
                     router.push('/call');
                 } else {

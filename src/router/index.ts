@@ -33,7 +33,7 @@ const routes: Array<RouteRecordRaw> = [
         component: () => import('@/views/Tab2Page.vue')
       },
       {
-        path: 'tab2/room/:id',
+        path: 'tab1/room/:id',
         component: () => import('@/views/HiveRoomPage.vue')
       },
       {

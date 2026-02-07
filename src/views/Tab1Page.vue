@@ -24,16 +24,19 @@
           @ionChange="Haptics.impact({ style: ImpactStyle.Light })"
         >
           <ion-segment-button value="hive">
-            <ion-label>SWARM</ion-label>
+            <ion-label>GARDEN</ion-label>
           </ion-segment-button>
           <ion-segment-button value="messages">
             <ion-label>CHATS</ion-label>
             <div v-if="totalUnread > 0" class="tab-unread-badge">{{ totalUnread }}</div>
           </ion-segment-button>
+          <ion-segment-button value="hub">
+            <ion-label>HIVE</ion-label>
+          </ion-segment-button>
         </ion-segment>
       </div>
 
-      <div class="hive-header" v-if="activeTab === 'hive' && !isSuperAdmin">
+      <div class="hive-header" v-if="activeTab === 'hive' && !isSuperAdmin && !showSplash">
         <div class="header-right" :class="{ 'header-squash': true }">
           <!-- Primary Actions -->
           <div @click="openNotificationsModal" class="nest-notif-btn">
@@ -76,7 +79,7 @@
       </div>
 
       <!-- The Dynamic Hive Area -->
-      <div v-if="activeTab === 'hive' && !isSuperAdmin" class="hive-background">
+      <div v-if="activeTab === 'hive' && !isSuperAdmin && !showSplash" class="hive-background">
         <div 
           v-for="bee in beeStates" 
           v-show="isBeeVisible(bee.beeId)"
@@ -148,7 +151,7 @@
       </div>
 
       <!-- Messages List Tab -->
-      <div v-if="activeTab === 'messages' && !isSuperAdmin" class="messages-tab-container animate-fade-in">
+      <div v-if="activeTab === 'messages' && !isSuperAdmin && !showSplash" class="messages-tab-container animate-fade-in">
         <div class="messages-header">
            <div class="search-bar-inline glass-panel">
               <ion-icon :icon="searchOutline"></ion-icon>
@@ -195,6 +198,11 @@
               </div>
            </div>
         </div>
+      </div>
+
+      <!-- Hive Hub Tab -->
+      <div v-if="activeTab === 'hub' && !isSuperAdmin && !showSplash" class="hub-tab-container animate-fade-in">
+        <HiveHub />
       </div>
 
       <!-- Search/Add Bee Modal -->
@@ -790,6 +798,7 @@ import BeeComposite from '@/components/BeeComposite.vue';
 import DailyLoginModal from '@/components/DailyLoginModal.vue';
 import { useDailyLoginService } from '@/services/DailyLoginService';
 import { useCallService } from '@/services/CallService';
+import HiveHub from '@/components/HiveHub.vue';
 
 
 interface BeeState {
@@ -1104,7 +1113,14 @@ onIonViewWillEnter(async () => {
   gardenActive.value = false;
   
   // Reset specifically for Garden tab navigation as requested by user
-  activeTab.value = 'hive';
+  // BUT allow returning to specific tabs (like back from Room to Hub)
+  const tabParam = route.query.tab as string;
+  if (tabParam && ['hive', 'messages', 'hub'].includes(tabParam)) {
+    activeTab.value = tabParam;
+  } else {
+    activeTab.value = 'hive';
+  }
+  
   isModalOpen.value = false;
   isViewingHistory.value = false;
 
@@ -1183,17 +1199,58 @@ const handleRefresh = async (event: any) => {
     }, 1500);
 };
 
+const preloadBeeAssets = () => {
+    const eyeAssets = [
+        'angry', 'crying', 'dizzy', 'eh', 'hehe', 'hehehe', 
+        'kawaii', 'meh', 'nonchalant', 'shock', 'smiley', 
+        'square_eye', 'what', 'x_eye'
+    ].map(eye => `/assets/bee assets/eyes/${eye}.png`);
+
+    const assets = [
+        '/assets/bee assets/wing_right.png',
+        '/assets/bee assets/wing_left.png',
+        '/assets/bee assets/bee_body.png',
+        '/assets/bee assets/bee_eyes.png',
+        '/assets/bee assets/eyeglass.png',
+        '/assets/bee assets/shades.png',
+        '/assets/bee assets/hat.png',
+        '/assets/bee assets/cowboyhat.png',
+        '/assets/bee assets/strawhat.png',
+        '/assets/bee assets/crown.png',
+        ...eyeAssets
+    ];
+    
+    const promises = assets.map(src => {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.src = src;
+            img.onload = resolve;
+            img.onerror = resolve; // Continue even on error
+        });
+    });
+    
+    return Promise.all(promises);
+};
+
 // Auto-hide splash on initial load after a short delay
-onMounted(() => {
+onMounted(async () => {
     // Clear any stuck bubbles from cache on load
     beeStates.value.forEach(b => {
         b.lastMessage = undefined;
         b.lastMessageId = undefined;
     });
 
+    const startTime = Date.now();
+    
+    // Preload assets and wait at least 2000ms for premium feel and complete load
+    await preloadBeeAssets();
+    
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, 2000 - elapsed);
+    
     setTimeout(() => {
         showSplash.value = false;
-    }, 2000);
+    }, remaining);
     
     // Initialize streak tracking
     if (userBeeId.value) {
@@ -1662,6 +1719,14 @@ watch(buzzes, (newBuzzes) => {
     }
 }, { deep: true });
 
+watch(showSplash, (isShowing) => {
+    if (!isShowing) {
+        if (animationTimer) clearInterval(animationTimer);
+        animationTimer = setInterval(animateBees, 4000);
+        setTimeout(animateBees, 100);
+    }
+});
+
 let statusTimer: any = null;
 
 onMounted(async () => {
@@ -1673,11 +1738,8 @@ onMounted(async () => {
       }
   }
 
-  animationTimer = setInterval(animateBees, 4000);
-  
-  // Give a longer delay for the first random move to ensure 
-  // elements are fully rendered at their cached positions first.
-  setTimeout(animateBees, 600); 
+  // Bee animations are now triggered by the showSplash watcher to ensure 
+  // assets are fully ready before bees take flight.
 
   // Check for first installation / tutorial
   const tutorialSeen = localStorage.getItem('notibee_tutorial_seen');
@@ -2326,6 +2388,11 @@ const handleNotifClick = (notif: any) => {
   margin: 0 auto;
 }
 
+.hub-tab-container {
+  min-height: 100%;
+  padding-bottom: 100px;
+}
+
 .messages-header {
   margin-bottom: 20px;
 }
@@ -2649,6 +2716,12 @@ const handleNotifClick = (notif: any) => {
   cursor: pointer;
   z-index: 10;
   will-change: transform;
+  animation: bee-fade-in 0.8s ease-out forwards;
+}
+
+@keyframes bee-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .bee-wrapper {

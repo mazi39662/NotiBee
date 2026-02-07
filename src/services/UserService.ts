@@ -219,21 +219,37 @@ export const useUserService = () => {
     };
 
     const getColonyMembers = (friendIds: string[]) => {
-        const members = ref<any[]>([]);
+        const CACHE_KEY = `notibee_colony_data_${userBeeId.value}`;
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '[]');
+
+        // Filter cached data to only include requested IDs
+        const initialMembers = cached.filter((b: any) => friendIds.includes(b.beeId));
+        const members = ref<any[]>(initialMembers);
+
         const noop = () => { };
         if (!friendIds || friendIds.length === 0) return { members, unsubscribe: noop };
 
-        // Firestore 'in' queries are limited to 30 items. 
-        // For a hobby app, this is usually enough. For more, we'd need multiple queries.
         const q = query(
             collection(db, 'users'),
             where('beeId', 'in', friendIds.slice(0, 30))
         );
 
         const unsubscribe = onSnapshot(q, (snap) => {
-            members.value = snap.docs
+            const fresh = snap.docs
                 .map(doc => doc.data())
-                .filter(b => b.beeId !== 'superadmin'); // Hide superadmin
+                .filter(b => b.beeId !== 'superadmin');
+
+            members.value = fresh;
+
+            // Update global colony cache
+            localStorage.setItem(CACHE_KEY, JSON.stringify(fresh));
+
+            // Also update specific design caches for instant loading across the app
+            fresh.forEach(bee => {
+                if (bee.customization) {
+                    localStorage.setItem('bee_custom_cache_' + bee.beeId, JSON.stringify(bee.customization));
+                }
+            });
         });
 
         return { members, unsubscribe };
