@@ -199,7 +199,10 @@
             <div 
               v-for="badge in allBadges" 
               :key="badge.id" 
-              :class="['badge-item', { locked: !hasAchievement(badge.id) }]"
+              :class="['badge-item', { 
+                locked: !hasAchievement(badge.id),
+                'pulsing-aura-premium': isNewBadge(badge.id)
+              }]"
               @click="showBadgeDetails(badge)"
             >
               <div class="badge-icon glass-panel">
@@ -527,6 +530,17 @@ const allBadges = getAllAchievements();
 
 const hasAchievement = (id: string) => {
   return (userProfile.value?.achievements || []).includes(id);
+};
+
+const isNewBadge = (id: string) => {
+  if (!userProfile.value?.achievementDates) return false;
+  const unlockedAt = userProfile.value.achievementDates[id];
+  if (!unlockedAt) return false;
+  
+  const unlockedDate = new Date(unlockedAt);
+  const now = new Date();
+  const diffHours = Math.abs(now.getTime() - unlockedDate.getTime()) / (1000 * 60 * 60);
+  return diffHours < 24;
 };
 
 const refreshProfile = async () => {

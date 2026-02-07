@@ -51,7 +51,8 @@
               :key="milestone.days"
               :class="['milestone-card', { 
                 'unlocked': milestone.unlocked,
-                'next': milestone.isNext 
+                'next': milestone.isNext,
+                'pulsing-aura-premium': milestone.isNext
               }]"
             >
               <div class="milestone-icon">
@@ -93,7 +94,8 @@
               :key="achievement.id"
               :class="['achievement-card glass-panel', { 
                 'unlocked': achievement.unlockedAt,
-                'locked': !achievement.unlockedAt 
+                'locked': !achievement.unlockedAt,
+                'pulsing-aura-premium': isNewAchievement(achievement)
               }]"
             >
               <div class="achievement-icon">
@@ -238,6 +240,15 @@ const getRequirementText = (achievement: any) => {
     default:
       return '';
   }
+};
+
+
+const isNewAchievement = (achievement: any) => {
+  if (!achievement.unlockedAt) return false;
+  const unlockedDate = new Date(achievement.unlockedAt);
+  const now = new Date();
+  const diffHours = Math.abs(now.getTime() - unlockedDate.getTime()) / (1000 * 60 * 60);
+  return diffHours < 24; // New if unlocked in the last 24 hours
 };
 
 onMounted(() => {
@@ -388,15 +399,11 @@ onUnmounted(() => {
   border-color: rgba(255, 191, 0, 0.3);
 }
 
+
+
 .milestone-card.next {
   border-color: #ffbf00;
-  box-shadow: 0 0 20px rgba(255, 191, 0, 0.3);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  box-shadow: 0 0 20px rgba(255, 191, 0, 0.4);
 }
 
 .milestone-icon {
