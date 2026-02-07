@@ -41,7 +41,7 @@ export const useDailyLoginService = () => {
     const getCurrentMonth = () => new Date().getMonth();
 
     const initLoginData = async () => {
-        if (!userBeeId.value) return;
+        if (!userBeeId.value || userBeeId.value === 'superadmin') return;
 
         try {
             const loginRef = doc(db, 'users', userBeeId.value, 'private', 'dailyLogin');
@@ -93,7 +93,7 @@ export const useDailyLoginService = () => {
     };
 
     const claimReward = async () => {
-        if (!userBeeId.value || isClaimedToday.value) return null;
+        if (!userBeeId.value || userBeeId.value === 'superadmin' || isClaimedToday.value) return null;
 
         const today = getTodayString();
         const currentMonth = getCurrentMonth();

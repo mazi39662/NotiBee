@@ -595,6 +595,41 @@ export const useUserService = () => {
             });
         }
 
+        // 8. Daily Active Bees (Last 7 days)
+        const dauHistory: { label: string, value: number }[] = [];
+        for (let i = 6; i >= 0; i--) {
+            const d = new Date(nowMs - i * 24 * 60 * 60 * 1000);
+            const dateStr = d.toISOString().split('T')[0];
+
+            // 1. Try to get accurate count from daily_stats
+            const dailyStatsColl = collection(db, 'daily_stats', dateStr, 'active_users');
+            const dailySnap = await getCountFromServer(dailyStatsColl);
+            let count = dailySnap.data().count;
+
+            // 2. Fallback to lastSeen approximation if no accurate data (for legacy)
+            if (count === 0) {
+                const date = new Date(nowMs - i * 24 * 60 * 60 * 1000);
+                date.setHours(0, 0, 0, 0);
+                const start = date.toISOString();
+
+                const endDate = new Date(date);
+                endDate.setDate(endDate.getDate() + 1);
+                const end = endDate.toISOString();
+
+                const q = query(usersColl,
+                    where('lastSeen', '>=', start),
+                    where('lastSeen', '<', end)
+                );
+                const snap = await getCountFromServer(q);
+                count = snap.data().count;
+            }
+
+            dauHistory.push({
+                label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                value: count
+            });
+        }
+
         return {
             totalUsers,
             onlineUsers,
@@ -602,8 +637,31 @@ export const useUserService = () => {
             totalStories: totalStoriesSnap.data().count,
             pendingReports: reportsSnap.data().count,
             activityPulse: pulseBuckets,
-            harvestHistory: harvestBuckets
+            harvestHistory: harvestBuckets,
+            dailyActiveHistory: dauHistory
         };
+    };
+
+    /**
+     * Log daily unique activity for analytics
+     */
+    const logDailyActivity = async () => {
+        if (!userBeeId.value || userBeeId.value === 'superadmin') return;
+
+        const today = new Date().toISOString().split('T')[0];
+        const lastLogged = localStorage.getItem('last_active_log');
+
+        if (lastLogged === today) return;
+
+        try {
+            const statsRef = doc(db, 'daily_stats', today, 'active_users', userBeeId.value);
+            await setDoc(statsRef, {
+                lastActive: new Date().toISOString()
+            });
+            localStorage.setItem('last_active_log', today);
+        } catch (e) {
+            console.warn('Daily activity log failed:', e);
+        }
     };
 
     /**
@@ -664,6 +722,53 @@ export const useUserService = () => {
         await updateDoc(userDoc, { anonymousLinkExpiry: expiry });
     };
 
+    /**
+     * Send Global Push Notification (Broadcast)
+     */
+    const sendGlobalBroadcast = async (title: string, message: string) => {
+        if (!isSuperAdmin.value) throw new Error('Unauthorized');
+
+        try {
+            // 1. Get all users with pushToken
+            const q = query(collection(db, 'users'), where('pushToken', '!=', null));
+            const snap = await getDocs(q);
+            const tokens = snap.docs.map(d => d.data().pushToken).filter(t => !!t);
+
+            if (tokens.length === 0) return { success: true, count: 0 };
+
+            // 2. Create dispatch entries in batches
+            const batchSize = 500;
+            let count = 0;
+
+            for (let i = 0; i < tokens.length; i += batchSize) {
+                const batch = writeBatch(db);
+                const currentBatch = tokens.slice(i, i + batchSize);
+
+                currentBatch.forEach(token => {
+                    const dispRef = doc(collection(db, 'dispatch'));
+                    batch.set(dispRef, {
+                        to: token,
+                        title: title,
+                        body: message,
+                        data: {
+                            type: 'GLOBAL_ANNOUNCEMENT',
+                            message: message
+                        },
+                        timestamp: new Date().toISOString()
+                    });
+                    count++;
+                });
+
+                await batch.commit();
+            }
+
+            return { success: true, count };
+        } catch (e) {
+            console.error('Broadcast failed:', e);
+            throw e;
+        }
+    };
+
     return {
         userBeeId,
         userVisibility,
@@ -701,6 +806,8 @@ export const useUserService = () => {
         reportUser,
         googleLogin,
         connectToGoogle,
-        updateAnonymousLinkExpiry
+        updateAnonymousLinkExpiry,
+        logDailyActivity,
+        sendGlobalBroadcast
     };
 };

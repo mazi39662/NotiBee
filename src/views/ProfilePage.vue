@@ -144,8 +144,8 @@
           </div>
         </div>
 
-        <!-- Individual Stats (Visible on all profiles) -->
-        <div class="stats-row">
+        <!-- Individual Stats (Visible on all profiles except superadmin) -->
+        <div v-if="beeId !== 'superadmin'" class="stats-row">
           <div class="stat-card glass-panel">
             <div class="stat-icon">💧</div>
             <div class="stat-info">

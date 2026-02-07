@@ -8,12 +8,7 @@
 
     <div class="rooms-container">
       <!-- New Fun Header -->
-      <!-- New Fun Header Removed -->
-      <div class="colony-hub-header animate-in">
-        <div class="hub-badge">HIVE HUB</div>
-        <h1>Gather your <span class="highlight">Colony</span></h1>
-      </div>
-
+     
       <!-- Buzz Anonymous Feature Card -->
       <div 
         class="anonymous-promo-card glass-panel animate-in gold-glow" 

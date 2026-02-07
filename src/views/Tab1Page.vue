@@ -831,7 +831,7 @@ const {
 const { 
     userBeeId, addFriend, removeFriend, getFriends, 
     getPendingRequests, acceptFriendRequest, rejectFriendRequest,
-    getColonyMembers, isAdmin, isSuperAdmin
+    getColonyMembers, isAdmin, isSuperAdmin, logDailyActivity
 } = useUserService();
 
 const { startCall } = useCallService();
@@ -1231,6 +1231,15 @@ const preloadBeeAssets = () => {
 
 // Auto-hide splash on initial load after a short delay
 onMounted(async () => {
+    // Auth Check
+    if (!userBeeId.value) {
+        router.push('/onboarding');
+        return;
+    }
+
+    // Log daily activity for DAU tracking
+    logDailyActivity();
+
     // Clear any stuck bubbles from cache on load
     beeStates.value.forEach(b => {
         b.lastMessage = undefined;
@@ -1251,6 +1260,12 @@ onMounted(async () => {
     
     // Initialize streak tracking
     if (userBeeId.value) {
+        // Sync my bee profile for the talking bee feature
+        const profile = await getUserProfile(userBeeId.value);
+        if (profile?.customization) {
+            localStorage.setItem('bee_customization', JSON.stringify(profile.customization));
+        }
+
         const { streaks, unsubscribe } = getUserStreaks(userBeeId.value);
         streaksUnsubscribe = unsubscribe;
         watch(streaks, (data) => {
@@ -1504,6 +1519,7 @@ const { initLoginData, isClaimedToday: isDailyClaimed } = useDailyLoginService()
 const isDailyLoginOpen = ref(false);
 
 const initDailyLogin = async () => {
+    if (isSuperAdmin.value) return;
     await initLoginData();
     if (!isDailyClaimed.value) {
         setTimeout(() => {
@@ -1727,6 +1743,19 @@ watch(showSplash, (isShowing) => {
 let statusTimer: any = null;
 
 onMounted(async () => {
+  // Initial cleanup of old state
+  beeStates.value = [];
+  
+  // Auth Check
+  if (!userBeeId.value) {
+      router.push('/onboarding');
+      return;
+  }
+
+  // Log daily activity for DAU tracking
+  const { logDailyActivity } = useUserService();
+  logDailyActivity();
+
   // Sync my bee profile for the talking bee feature
   if (userBeeId.value) {
       const profile = await useUserService().getUserProfile(userBeeId.value);

@@ -3,7 +3,7 @@
     <ion-header :translucent="true">
       <ion-toolbar>
         <ion-title>Nectar</ion-title>
-        <div slot="end" class="header-honey-jar" @click="showJarDetails">
+        <div v-if="!isSuperAdmin" slot="end" class="header-honey-jar" @click="showJarDetails">
           <div class="jar-icon-wrapper">
              <span class="jar-emoji">🏺</span>
              <div class="jar-level" :style="{ height: `${jarProgress}%` }"></div>
@@ -762,7 +762,7 @@
           </div>
 
           <div class="harvest-actions">
-            <ion-button expand="block" class="ad-reward-button" @click="handleGetFreeJar">
+            <ion-button v-if="!isSuperAdmin" expand="block" class="ad-reward-button" @click="handleGetFreeJar">
               Watch Ad for +10 Drops 🍯✨
             </ion-button>
             <ion-button expand="block" fill="clear" color="medium" @click="isJarModalOpen = false">
@@ -1009,6 +1009,7 @@ const {
 const honeyJarIcon = '🏺';
 
 const { userBeeId, getFriends, getUserProfile } = useUserService();
+const isSuperAdmin = computed(() => userBeeId.value === 'superadmin');
 const friends = getFriends();
 const {
   stories,
@@ -1139,6 +1140,7 @@ const showJarDetails = () => {
 };
 
 const handleGetFreeJar = () => {
+  if (isSuperAdmin.value) return;
   showRewarded(async () => {
      await addBulkHoneyDrops(10);
      

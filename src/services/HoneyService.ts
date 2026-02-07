@@ -16,7 +16,7 @@ export const useHoneyService = () => {
      * Add honey drops for interactions
      */
     const addHoneyDrops = async (type: 'VIEW' | 'COMMENT' | 'POLLINATE') => {
-        if (!userBeeId.value) return;
+        if (!userBeeId.value || userBeeId.value === 'superadmin') return;
 
         let dropsToAdd = 1;
         if (type === 'COMMENT') dropsToAdd = 3;
@@ -29,7 +29,7 @@ export const useHoneyService = () => {
      * Bulk add honey drops (e.g. for rewards)
      */
     const addBulkHoneyDrops = async (count: number) => {
-        if (!userBeeId.value || count <= 0) return;
+        if (!userBeeId.value || userBeeId.value === 'superadmin' || count <= 0) return;
 
         honeyDrops.value += count;
         lifetimeHoneyDrops.value += count;
@@ -49,7 +49,7 @@ export const useHoneyService = () => {
      * Directly add full honey jars (e.g. for rewarded ads)
      */
     const addHoneyJar = async (count: number = 1) => {
-        if (!userBeeId.value) return;
+        if (!userBeeId.value || userBeeId.value === 'superadmin') return;
 
         honeyJars.value += count;
         lifetimeJars.value += count;

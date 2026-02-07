@@ -13,7 +13,7 @@
             <ion-icon :icon="chevronBackOutline"></ion-icon>
           </div>
           <div class="title-section">
-            <h1 class="main-title">BuzzMe <span class="highlight">Lab</span></h1>
+            <h1 class="main-title"> <span class="highlight">BuzzMe</span></h1>
             <p class="subtitle">Let your friends send you secret messages.</p>
           </div>
         </div>

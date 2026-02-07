@@ -5,7 +5,7 @@ import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 
 // Current App Version (Should match package.json but we use this as source of truth for UI)
-export const APP_VERSION = '2.0.6';
+export const APP_VERSION = '2.1.0';
 
 // Replace with your actual package ID when you have it on Play Store
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.notibee.app';

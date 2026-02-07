@@ -17,14 +17,21 @@
       <div class="main-segment-wrapper">
         <ion-segment v-model="activeSegment" mode="ios" class="main-nav-segment">
           <ion-segment-button value="analytics" @click="loadAnalytics">
-            <ion-label>DASHBOARD</ion-label>
+            <ion-icon :icon="barChartOutline"></ion-icon>
+            <ion-label>Stats</ion-label>
           </ion-segment-button>
           <ion-segment-button value="directory">
-            <ion-label>BEES</ion-label>
+            <ion-icon :icon="peopleOutline"></ion-icon>
+            <ion-label>Bees</ion-label>
           </ion-segment-button>
           <ion-segment-button value="reports">
-            <ion-label>REPORTS</ion-label>
+            <ion-icon :icon="alertCircleOutline"></ion-icon>
+            <ion-label>Alerts</ion-label>
             <ion-badge v-if="reports.length > 0" color="danger" class="notif-dot"></ion-badge>
+          </ion-segment-button>
+          <ion-segment-button value="broadcast">
+            <ion-icon :icon="megaphoneOutline"></ion-icon>
+            <ion-label>Push</ion-label>
           </ion-segment-button>
         </ion-segment>
       </div>
@@ -85,9 +92,27 @@
             </div>
           </div>
         </div>
+
+        <!-- Daily Active Bees -->
+        <div class="chart-card glass-panel animate-pop" style="animation-delay: 0.5s">
+          <div class="chart-header">
+            <h3>Daily Bee Traffic</h3>
+            <span class="chart-badge success">7 Day DAU</span>
+          </div>
+          <div class="growth-bars">
+            <div v-for="(day, i) in dailyActiveTrends" :key="i" class="growth-item">
+              <div class="bar-wrapper">
+                <div class="bar-fill" :style="{ height: day.displayValue + '%', background: 'linear-gradient(to top, #2dd36f, #81f7af)' }">
+                   <span class="bar-val">{{ day.raw }}</span>
+                </div>
+              </div>
+              <span class="day-label">{{ day.label }}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div class="recent-activity-section glass-panel animate-pop" style="animation-delay: 0.5s">
+      <div class="recent-activity-section glass-panel animate-pop" style="animation-delay: 0.6s">
         <div class="section-header">
           <h3>Colony Vitality</h3>
           <ion-icon :icon="flash" color="primary"></ion-icon>
@@ -207,6 +232,69 @@
         </div>
       </ion-list>
     </div>
+ 
+    <!-- Broadcast Section -->
+    <div v-if="activeSegment === 'broadcast'" class="admin-section broadcast-view animate-fade-in">
+      <div class="broadcast-card glass-panel animate-pop">
+        <div class="card-header-icon">
+          <ion-icon :icon="megaphoneOutline" color="primary"></ion-icon>
+        </div>
+        <h2>Global Swarm Message</h2>
+        <p class="subtitle">This will be delivered as a Push Notification to ALL Bees in the Hive.</p>
+        
+        <div class="broadcast-form">
+          <div class="input-group">
+            <label>Notification Title</label>
+            <input 
+              type="text" 
+              v-model="broadcastTitle" 
+              placeholder="e.g. Hive Update 🍯" 
+              class="glass-input" 
+            />
+          </div>
+          <div class="input-group">
+            <label>Message Content</label>
+            <textarea 
+              v-model="broadcastMessage" 
+              placeholder="What do you want to tell the colony?" 
+              class="glass-input" 
+              rows="4"
+            ></textarea>
+          </div>
+ 
+          <div class="warning-box">
+             <ion-icon :icon="alertCircleOutline"></ion-icon>
+             <span>Use this strategically. Excessive broadcasting can lead to uninstalls.</span>
+          </div>
+ 
+          <ion-button 
+            expand="block" 
+            color="primary" 
+            class="broadcast-btn gold-glow" 
+            :disabled="!broadcastTitle || !broadcastMessage || isBroadcasting"
+            @click="confirmBroadcast"
+          >
+            <template v-if="!isBroadcasting">
+              <ion-icon :icon="paperPlaneOutline" slot="start"></ion-icon>
+              DEPLOY BROADCAST
+            </template>
+            <template v-else>
+              <ion-spinner name="crescent"></ion-spinner>
+              SENDING TO THE SWARM...
+            </template>
+          </ion-button>
+        </div>
+      </div>
+ 
+      <div class="broadcast-history-preview glass-panel animate-pop" style="animation-delay: 0.2s">
+         <h3>Broadcast Guidelines</h3>
+         <ul>
+           <li>Keep it short (under 100 chars for best display).</li>
+           <li>Use emojis to increase interaction.</li>
+           <li>Only send urgent or high-value updates.</li>
+         </ul>
+      </div>
+    </div>
 
     <!-- Story Preview Modal -->
     <ion-modal :is-open="!!selectedReportedStory" @didDismiss="selectedReportedStory = null" class="admin-preview-modal">
@@ -245,7 +333,8 @@ import {
 } from '@ionic/vue';
 import { 
   closeOutline, logOutOutline, chevronForwardOutline, schoolOutline, 
-  alertCircleOutline, barChartOutline, pulseOutline, flash 
+  alertCircleOutline, barChartOutline, pulseOutline, flash, megaphoneOutline,
+  paperPlaneOutline, peopleOutline
 } from 'ionicons/icons';
 import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
@@ -256,7 +345,8 @@ import { collection, query, orderBy, onSnapshot, doc, deleteDoc, getDoc } from '
 
 const { 
   isSuperAdmin, promoteToAdmin, demoteFromAdmin, adminDeleteUser, 
-  getUserProfile, clearLocalData, getAdminAnalytics, getPagedUsers 
+  getUserProfile, clearLocalData, getAdminAnalytics, getPagedUsers,
+  sendGlobalBroadcast
 } = useUserService();
 const { adminDeleteStory } = useMyDaysService();
 const router = useRouter();
@@ -274,6 +364,11 @@ const userSearchQuery = ref('');
 const foundUser = ref<any>(null);
 
 const selectedReportedStory = ref<any>(null);
+ 
+// Broadcast state
+const broadcastTitle = ref('');
+const broadcastMessage = ref('');
+const isBroadcasting = ref(false);
 
 const statCards = computed(() => [
   { label: 'Total Bees', value: analytics.value?.totalUsers || 0, icon: '🐝', color: '#ffbf00' },
@@ -308,6 +403,24 @@ const harvestHistory = computed(() => {
 const uniqueReportedCount = computed(() => {
   const ids = reports.value.map(r => r.type === 'user_report' ? r.targetBeeId : r.storyId);
   return new Set(ids).size;
+});
+
+const dailyActiveTrends = computed(() => {
+  const data = analytics.value?.dailyActiveHistory || [
+    { label: '...', value: 0 },
+    { label: '...', value: 0 },
+    { label: '...', value: 0 },
+    { label: '...', value: 0 },
+    { label: '...', value: 0 },
+    { label: '...', value: 0 },
+    { label: '...', value: 0 }
+  ];
+  const max = Math.max(...data.map((d: any) => d.value), 3);
+  return data.map((d: any) => ({
+    ...d,
+    displayValue: (d.value / max) * 100,
+    raw: d.value
+  }));
 });
 
 onMounted(async () => {
@@ -490,6 +603,47 @@ const handleLogout = async () => {
   });
   await alert.present();
 };
+ 
+const confirmBroadcast = async () => {
+  const alert = await alertController.create({
+    header: 'Target the Entire Colony?',
+    message: `You are about to send a push notification to EVERYONE. Are you sure?`,
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      { 
+        text: 'YES, SEND IT', 
+        handler: handleSendBroadcast 
+      }
+    ]
+  });
+  await alert.present();
+};
+ 
+const handleSendBroadcast = async () => {
+  if (!broadcastTitle.value || !broadcastMessage.value) return;
+  
+  isBroadcasting.value = true;
+  try {
+    const result = await sendGlobalBroadcast(broadcastTitle.value, broadcastMessage.value);
+    const toast = await toastController.create({
+      message: `Success! Broadcast dispatched to ${result.count} bees. 🐝`,
+      duration: 3000,
+      color: 'success'
+    });
+    await toast.present();
+    broadcastTitle.value = '';
+    broadcastMessage.value = '';
+  } catch (e) {
+    const toast = await toastController.create({
+      message: 'Failed to deploy broadcast. Check logs.',
+      duration: 3000,
+      color: 'danger'
+    });
+    await toast.present();
+  } finally {
+    isBroadcasting.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -581,7 +735,12 @@ ion-segment-button {
   --color-checked: #ffbf00;
   --indicator-color: transparent;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 10px;
+}
+
+ion-segment-button ion-icon {
+  font-size: 20px;
+  margin-bottom: 2px;
 }
 
 ion-segment-button.segment-button-checked {
@@ -643,7 +802,12 @@ ion-segment-button.segment-button-checked {
 }
 
 @media (min-width: 768px) {
-  .analytics-charts-grid { grid-template-columns: 1fr 1fr; }
+  .analytics-charts-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+}
+
+.chart-badge.success {
+  background: rgba(45, 211, 111, 0.2);
+  color: #2dd36f;
 }
 
 .chart-card {
@@ -837,4 +1001,112 @@ ion-segment-button.segment-button-checked {
 
 @keyframes pop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+ 
+/* Broadcast Styles */
+.broadcast-view {
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+ 
+.broadcast-card {
+  padding: 30px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+ 
+.card-header-icon {
+  font-size: 40px;
+  margin-bottom: 15px;
+}
+ 
+.broadcast-card h2 {
+  margin: 0;
+  color: #fff;
+  font-weight: 900;
+}
+ 
+.broadcast-card .subtitle {
+  color: #888;
+  font-size: 0.9em;
+  margin: 8px 0 25px;
+}
+ 
+.broadcast-form {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+ 
+.input-group label {
+  display: block;
+  font-size: 0.75em;
+  font-weight: 800;
+  color: #ffbf00;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+ 
+.glass-input {
+  width: 100%;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 14px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.3s ease;
+}
+ 
+.glass-input:focus {
+  border-color: #ffbf00;
+  background: rgba(255,255,255,0.08);
+}
+ 
+.warning-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(235, 68, 90, 0.1);
+  border: 1px solid rgba(235, 68, 90, 0.2);
+  padding: 12px;
+  border-radius: 10px;
+  color: #eb445a;
+  font-size: 0.8em;
+  font-weight: 600;
+}
+ 
+.warning-box ion-icon {
+  font-size: 20px;
+}
+ 
+.broadcast-btn {
+  height: 56px;
+  --border-radius: 14px;
+  margin-top: 10px;
+}
+ 
+.broadcast-history-preview {
+  padding: 20px;
+}
+ 
+.broadcast-history-preview h3 {
+  margin-top: 0;
+  font-size: 1em;
+  color: #fff;
+  font-weight: 800;
+}
+ 
+.broadcast-history-preview ul {
+  margin: 10px 0 0;
+  padding-left: 20px;
+  color: #aaa;
+  font-size: 0.85em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 </style>
