@@ -41,6 +41,7 @@ export interface Ad {
 
 const ads = ref<Ad[]>([]);
 const isAdMobInitialized = ref(false);
+const isBannerVisible = ref(false);
 
 export function useAdService() {
 
@@ -48,6 +49,22 @@ export function useAdService() {
         try {
             await AdMob.initialize();
             isAdMobInitialized.value = true;
+
+            // Handle Banner Events
+            AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
+                isBannerVisible.value = true;
+            });
+
+            AdMob.addListener(BannerAdPluginEvents.FailedToLoad, () => {
+                isBannerVisible.value = false;
+            });
+            
+            AdMob.addListener(BannerAdPluginEvents.Closed, () => {
+                isBannerVisible.value = false;
+            });
+
+            // Initialize position as hidden until loaded
+            isBannerVisible.value = false;
 
             // Show banner immediately after initialization
             showBanner();
@@ -57,19 +74,30 @@ export function useAdService() {
     };
 
     /**
-     * Show a bottom banner ad
+     * Show a top banner ad
      */
     const showBanner = async () => {
         try {
             await AdMob.showBanner({
                 adId: BANNER_UNIT_ID,
                 adSize: BannerAdSize.ADAPTIVE_BANNER,
-                position: BannerAdPosition.BOTTOM_CENTER,
+                position: BannerAdPosition.TOP_CENTER,
                 margin: 0,
                 isTesting: false // SET TO FALSE FOR PRODUCTION
             });
+            // Note: isBannerVisible is ONLY set by the 'Loaded' listener now
         } catch (e) {
             console.error('Banner Ad failed', e);
+            isBannerVisible.value = false;
+        }
+    };
+
+    const hideBanner = async () => {
+        try {
+            await AdMob.hideBanner();
+            isBannerVisible.value = false;
+        } catch (e) {
+            console.error('Hide Banner failed', e);
         }
     };
 
@@ -177,11 +205,13 @@ export function useAdService() {
 
     return {
         ads,
+        isBannerVisible,
         fetchAds,
         trackAdClick,
         trackAdView,
         initializeAdMob,
         showBanner,
+        hideBanner,
         showInterstitial,
         showRewarded
     };

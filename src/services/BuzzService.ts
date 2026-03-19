@@ -101,7 +101,7 @@ export const useBuzzService = () => {
     }
   };
 
-  const addReceivedBuzz = (sender: string, message: string, image?: string, audioUrl?: string, duration?: number, msgId?: string, type?: string) => {
+  const addReceivedBuzz = (sender: string, message: string, image?: string, audioUrl?: string, duration?: number, msgId?: string, type?: string, timestamp?: string, time?: string) => {
     const buzz: Buzz = {
       id: msgId || 'rx_' + Date.now().toString(),
       sender,
@@ -110,16 +110,16 @@ export const useBuzzService = () => {
       image,
       audioUrl,
       duration,
-      time: new Date().toLocaleTimeString(),
+      time: time || new Date().toLocaleTimeString(),
       status: 'delivered',
-      timestamp: new Date().toISOString(),
+      timestamp: timestamp || new Date().toISOString(),
       reactions: {},
       type
     };
     saveToLocal(buzz);
   };
 
-  const addSentBuzz = (recipient: string, message: string, senderId: string, image?: string, audioUrl?: string, duration?: number, msgId?: string, forceStatus?: Buzz['status'], type?: string) => {
+  const addSentBuzz = (recipient: string, message: string, senderId: string, image?: string, audioUrl?: string, duration?: number, msgId?: string, forceStatus?: Buzz['status'], type?: string, timestamp?: string, time?: string) => {
     const buzz: Buzz = {
       id: msgId || 'tx_' + Date.now().toString(),
       sender: senderId,
@@ -128,9 +128,9 @@ export const useBuzzService = () => {
       image,
       audioUrl,
       duration,
-      time: new Date().toLocaleTimeString(),
+      time: time || new Date().toLocaleTimeString(),
       status: forceStatus || 'sent',
-      timestamp: new Date().toISOString(),
+      timestamp: timestamp || new Date().toISOString(),
       reactions: {},
       type
     };
@@ -183,7 +183,13 @@ export const useBuzzService = () => {
                 const isMessage = !data.type || data.type === 'BUZZ' || data.type === 'AUDIO' || data.type === 'ROOM_BUZZ' || data.type === 'ROOM_BUZZ_AUDIO';
 
                 if (isMessage) {
-                  addReceivedBuzz(data.from, data.message, data.image, data.audioUrl, data.duration, data.msgId, data.type);
+                  const msgTimestamp = data.timestamp || new Date().toISOString();
+                  let msgTime = new Date().toLocaleTimeString();
+                  try {
+                    msgTime = new Date(msgTimestamp).toLocaleTimeString();
+                  } catch (e) { /* fallback to now */ }
+
+                  addReceivedBuzz(data.from, data.message, data.image, data.audioUrl, data.duration, data.msgId, data.type, msgTimestamp, msgTime);
                   incrementUnread(data.from);
                 }
 

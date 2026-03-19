@@ -1351,7 +1351,25 @@ const viewFullImage = (url: string) => {
 };
 
 const formatTime = (ts: number) => {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const date = new Date(ts);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  if (isToday) {
+    return timeStr;
+  } else if (isYesterday) {
+    return `Yesterday, ${timeStr}`;
+  } else if (diff < 6 * 24 * 60 * 60 * 1000) {
+    return `${date.toLocaleDateString([], { weekday: 'short' })}, ${timeStr}`;
+  } else {
+    return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
+  }
 };
 
 // Room Management

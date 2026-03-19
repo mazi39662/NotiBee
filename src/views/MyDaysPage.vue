@@ -1354,8 +1354,7 @@ onMounted(async () => {
   await fetchStories();
   await deleteExpiredStories();
   
-  // Real Ads Initialization
-  initializeAdMob();
+  // Real Ads Initialization already handled in App.vue
   if (userBeeId.value) {
     fetchProfile(userBeeId.value);
   }

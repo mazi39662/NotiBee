@@ -862,11 +862,18 @@ export function useMyDaysService() {
      * Get integrated stories with ads interspersed
      */
     const integratedStories = computed<FeedItem[]>(() => {
-        const result: FeedItem[] = [];
         const adsList = ads.value;
+        const storiesList = stories.value;
+
+        // If no stories at all, show at least one ad if available
+        if (storiesList.length === 0) {
+            return adsList.length > 0 ? [adsList[0]] : [];
+        }
+
+        const result: FeedItem[] = [];
         let adIndex = 0;
 
-        stories.value.forEach((story, index) => {
+        storiesList.forEach((story, index) => {
             result.push(story);
 
             // Insert an ad every 5 stories if ads are available
@@ -874,14 +881,11 @@ export function useMyDaysService() {
             if (shouldInsertAd) {
                 result.push(adsList[adIndex]);
                 adIndex++;
-
-                // Reset adIndex if we want to loop through ads or stop if we run out
-                // if (adIndex >= adsList.length) adIndex = 0; 
             }
         });
 
-        // If very few stories, maybe append an ad at the end
-        if (stories.value.length > 0 && stories.value.length < 5 && adsList.length > 0 && result.length === stories.value.length) {
+        // Ensure at least one ad is shown if we have fewer than 5 stories
+        if (adsList.length > 0 && !result.some(item => 'isAd' in item)) {
             result.push(adsList[0]);
         }
 

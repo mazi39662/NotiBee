@@ -636,7 +636,7 @@
                           />
                           <p v-else-if="b.message">{{ b.message }}</p>
                           <span class="msg-time">
-                            {{ new Date(b.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                            {{ formatMessageTime(b.timestamp) }}
                             <span v-if="b.sender === userBeeId" class="read-receipt">
                                <ion-spinner name="crescent" v-if="b.status === 'sending'" class="receipt-spinner"></ion-spinner>
                                <ion-icon :icon="b.status === 'read' ? checkmarkDone : checkmark" :class="{ 'seen': b.status === 'read' }" v-else-if="b.status === 'read' || b.status === 'delivered' || b.status === 'sent' || !b.status"></ion-icon>
@@ -831,7 +831,7 @@ const {
 const { 
     userBeeId, addFriend, removeFriend, getFriends, 
     getPendingRequests, acceptFriendRequest, rejectFriendRequest,
-    getColonyMembers, isAdmin, isSuperAdmin, logDailyActivity
+    getColonyMembers, isAdmin, isSuperAdmin, logDailyActivity, getUserProfile
 } = useUserService();
 
 const { startCall } = useCallService();
@@ -2274,6 +2274,28 @@ const getLongestStreakForBee = (friendId: string): number => {
 };
 
 // Navigation to profile
+const formatMessageTime = (timestamp: string | number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const isToday = date.toDateString() === now.toDateString();
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (isToday) {
+        return timeStr;
+    } else if (isYesterday) {
+        return `Yesterday, ${timeStr}`;
+    } else if (diff < 6 * 24 * 60 * 60 * 1000) {
+        return `${date.toLocaleDateString([], { weekday: 'short' })}, ${timeStr}`;
+    } else {
+        return `${date.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${timeStr}`;
+    }
+};
+
 const getTimeAgo = (timestamp: number) => {
     const diff = Date.now() - timestamp;
     const seconds = Math.floor(diff / 1000);

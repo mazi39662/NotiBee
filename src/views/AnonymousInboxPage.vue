@@ -90,6 +90,9 @@
 
               <div class="buzz-card-footer">
                 <div class="accent-line" :style="{ background: msg.colorTheme }"></div>
+                <div class="sent-time-tag">
+                  {{ getSentTime(msg.timestamp) }}
+                </div>
                 <ion-icon :icon="chevronForwardOutline" class="arrow-icon"></ion-icon>
               </div>
             </div>
@@ -309,6 +312,11 @@ const getRemainingTime = (expiresAt: number) => {
   
   if (hours > 0) return `${hours}h ${mins}m`;
   return `${mins}m`;
+};
+
+const getSentTime = (timestamp: number) => {
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 const handleTouchStart = (e: TouchEvent) => {
@@ -677,6 +685,13 @@ const reactToMsg = async (msg: AnonymousMessage, emoji: string) => {
 .buzz-card:hover .arrow-icon {
   color: rgba(255, 255, 255, 0.4);
   transform: translateX(5px);
+}
+
+.sent-time-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.2);
+  letter-spacing: 0.5px;
 }
 
 /* Modal Redesign */
