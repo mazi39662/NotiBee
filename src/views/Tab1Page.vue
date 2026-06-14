@@ -1478,19 +1478,32 @@ const getRandomPos = () => {
     };
 };
 
-const animateBees = () => {
-    // Update in-place to preserve reactivity for lastMessage bubbles
-    beeStates.value.forEach(bee => {
-        if (bee.isDragging) return; 
-        const pos = getRandomPos();
+let lastAnimatedIndex = 0;
+const animateBeesStaggered = () => {
+    if (beeStates.value.length === 0) return;
+    
+    // Animate up to 2 bees at a time to spread CPU/compositor load
+    // Every call updates a DIFFERENT subset of bees
+    const batchSize = Math.max(1, Math.floor(beeStates.value.length / 4)); 
+    
+    for (let i = 0; i < batchSize; i++) {
+        const index = (lastAnimatedIndex + i) % beeStates.value.length;
+        const bee = beeStates.value[index];
         
-        // Flip logic: if new X is less than current X, it's moving left
-        bee.isFlipped = pos.x < bee.x;
-        
-        bee.x = pos.x;
-        bee.y = pos.y;
-        bee.speed = 3000 + Math.random() * 4000;
-    });
+        if (bee && !bee.isDragging) {
+            const pos = getRandomPos();
+            
+            // Organic flip logic
+            bee.isFlipped = pos.x < bee.x;
+            bee.x = pos.x;
+            bee.y = pos.y;
+            
+            // Longer, slower movements are much smoother on low-end hardware
+            bee.speed = 4500 + Math.random() * 5500;
+        }
+    }
+    
+    lastAnimatedIndex = (lastAnimatedIndex + batchSize) % beeStates.value.length;
 };
 
 let animationTimer: any = null;
@@ -1596,9 +1609,9 @@ watch([colonyBeesData, myBeeData, userBeeId], ([colonyData, me, myId]) => {
   });
 
   // 3. Remove bees that are no longer in colonyIds AND not me
-  // Wait until colonyIds has been fetched (if it's empty, we might still be loading)
-  const validIds = [myId, ...colonyIds.value];
-  if (validIds.length > 1 || (myId && colonyIds.value.length === 0)) {
+  // Wait until colonyIds has been fetched to avoid flickering/clearing cache on start
+  if (colonyIds.value.length > 0) {
+      const validIds = [myId, ...colonyIds.value];
       const currentIds = beeStates.value.map(b => b.beeId);
       const hasRemovals = currentIds.some(id => !validIds.includes(id));
       if (hasRemovals) {
@@ -1612,7 +1625,11 @@ watch([colonyBeesData, myBeeData, userBeeId], ([colonyData, me, myId]) => {
     lastMessage: undefined,
     lastMessageId: undefined
   }));
-  localStorage.setItem(CACHE_KEY, JSON.stringify(statesToCache));
+  
+  // Only save if we actually have data, to prevent wiping cache with an empty state
+  if (statesToCache.length > 0) {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(statesToCache));
+  }
 }, { immediate: true, deep: true });
 
 const scrollToBottom = async (duration = 300) => {
@@ -1735,16 +1752,28 @@ watch(buzzes, (newBuzzes) => {
 watch(showSplash, (isShowing) => {
     if (!isShowing) {
         if (animationTimer) clearInterval(animationTimer);
-        animationTimer = setInterval(animateBees, 4000);
-        setTimeout(animateBees, 100);
+        // Update a batch of bees every 1.5 seconds instead of all every 6 seconds
+        // This spreads the load and keeps the garden feeling alive constantly
+        animationTimer = setInterval(animateBeesStaggered, 1500);
+        
+        // Initial fly-in for everyone
+        setTimeout(() => {
+            beeStates.value.forEach(bee => {
+                const pos = getRandomPos();
+                bee.isFlipped = pos.x < bee.x;
+                bee.x = pos.x;
+                bee.y = pos.y;
+                bee.speed = 4000 + Math.random() * 4000;
+            });
+        }, 500);
     }
 });
 
 let statusTimer: any = null;
 
 onMounted(async () => {
-  // Initial cleanup of old state
-  beeStates.value = [];
+  // DON'T clear beeStates here, let getCachedStates() preserve them for fast loading
+
   
   // Auth Check
   if (!userBeeId.value) {

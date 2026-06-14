@@ -1,5 +1,5 @@
 <template>
-  <ion-app :class="{ 'has-ad-banner': isBannerVisible }">
+  <ion-app>
     <ion-router-outlet />
   </ion-app>
 </template>
@@ -27,7 +27,7 @@ import { useAdService } from '@/services/AdService';
 
 
 const { initPush, sendLocalBuzz } = usePushService();
-const { isBannerVisible, initializeAdMob } = useAdService();
+const { initializeAdMob } = useAdService();
 const { shouldNotify } = useNotificationService();
 const { userBeeId } = useUserService();
 const { initInboxListener, processOutbox } = useBuzzService();
@@ -216,23 +216,4 @@ watch(() => callState.value.incomingCall, (incoming) => {
 </script>
 
 <style>
-/* Global adjustment for AdMob Top Banner */
-.has-ad-banner {
-  margin-top: 60px !important; /* Safe height for adaptive banners */
-}
-
-/* Ensure header doesn't get hidden under the ad if it's fixed */
-.has-ad-banner ion-header {
-  top: 60px !important;
-}
-
-/* On desktop/web, usually we don't show the banner, but if we do, this helps */
-@media (min-width: 768px) {
-  .has-ad-banner {
-    margin-top: 90px !important;
-  }
-  .has-ad-banner ion-header {
-    top: 90px !important;
-  }
-}
 </style>

@@ -49,47 +49,20 @@ export function useAdService() {
         try {
             await AdMob.initialize();
             isAdMobInitialized.value = true;
-
-            // Handle Banner Events
-            AdMob.addListener(BannerAdPluginEvents.Loaded, () => {
-                isBannerVisible.value = true;
-            });
-
-            AdMob.addListener(BannerAdPluginEvents.FailedToLoad, () => {
-                isBannerVisible.value = false;
-            });
-            
-            AdMob.addListener(BannerAdPluginEvents.Closed, () => {
-                isBannerVisible.value = false;
-            });
-
-            // Initialize position as hidden until loaded
-            isBannerVisible.value = false;
-
-            // Show banner immediately after initialization
-            showBanner();
+            // Explicitly hide any existing banner to ensure tabs are not covered
+            await AdMob.hideBanner();
+            console.log('AdMob initialized, banner hidden');
         } catch (e) {
-            console.warn('AdMob Initialization failed (likely not on mobile)', e);
+            console.error('AdMob initialization failed', e);
         }
     };
 
     /**
-     * Show a top banner ad
+     * Show a bottom banner ad - Disabled as per user request to avoid covering tabs
      */
     const showBanner = async () => {
-        try {
-            await AdMob.showBanner({
-                adId: BANNER_UNIT_ID,
-                adSize: BannerAdSize.ADAPTIVE_BANNER,
-                position: BannerAdPosition.TOP_CENTER,
-                margin: 0,
-                isTesting: false // SET TO FALSE FOR PRODUCTION
-            });
-            // Note: isBannerVisible is ONLY set by the 'Loaded' listener now
-        } catch (e) {
-            console.error('Banner Ad failed', e);
-            isBannerVisible.value = false;
-        }
+        // Banner ads are disabled to prevent covering bottom navigation tabs
+        console.log('Banner display skipped');
     };
 
     const hideBanner = async () => {
@@ -172,6 +145,9 @@ export function useAdService() {
      * Best used during natural transitions (e.g. after posting a story)
      */
     const showInterstitial = async () => {
+        if (!isAdMobInitialized.value) {
+            await initializeAdMob();
+        }
         try {
             await AdMob.prepareInterstitial({
                 adId: INTERSTITIAL_UNIT_ID,
@@ -188,6 +164,9 @@ export function useAdService() {
      * Used to give users Honey Jars/Drops in exchange for watching
      */
     const showRewarded = async (onComplete: () => void) => {
+        if (!isAdMobInitialized.value) {
+            await initializeAdMob();
+        }
         try {
             await AdMob.prepareRewardVideoAd({
                 adId: REWARDED_UNIT_ID,

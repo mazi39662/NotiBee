@@ -105,7 +105,7 @@
                 :disabled="isGenerating || isLinkActive"
               >
                 <ion-spinner v-if="isGenerating" name="crescent"></ion-spinner>
-                <span v-else>START 24H LAB SESSION</span>
+                <span v-else>Start 24H BuzzMe Post</span>
               </button>
             </div>
           </template>
@@ -117,7 +117,7 @@
             <div class="step-header">
               <span class="step-idx">01</span>
             </div>
-            <p>Start your <strong>Lab Session</strong></p>
+            <p>Start your <strong>24H BuzzMe Post</strong></p>
           </div>
           <div class="step-card glass-panel">
             <div class="step-header">

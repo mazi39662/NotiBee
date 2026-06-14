@@ -15,7 +15,7 @@
 
         <ion-tab-button tab="my-days" href="/tabs/my-days" class="days-button" @click="playHaptic">
           <ion-icon aria-hidden="true" :icon="waterOutline" />
-          <ion-label>Nectar</ion-label>
+          <ion-label>My Days</ion-label>
         </ion-tab-button>
 
         <ion-tab-button tab="tab3" href="/tabs/tab3" @click="playHaptic">

@@ -3,48 +3,51 @@
     <div class="bee-wrapper-internal" :class="{ 'is-buzzing': animated }">
       <!-- Wings Layer (Behind) -->
       <div class="bee-wings-layer">
-         <div class="wing-slot-comp">
-          <img src="/assets/bee assets/wing_right.png" alt="wing" class="wing-img-comp right-wing" :class="{ 'is-animated': animated }" />
-        </div>
-        <div class="wing-slot-comp">
-          <img src="/assets/bee assets/wing_left.png" alt="wing" class="wing-img-comp left-wing" :class="{ 'is-animated': animated }" />
-        </div>
-       
+      <div class="wing-slot-comp">
+        <img src="/assets/bee assets/wing_right.png" alt="wing" class="wing-img-comp right-wing"
+          :class="{ 'is-animated': animated }" decoding="async" />
+      </div>
+      <div class="wing-slot-comp">
+        <img src="/assets/bee assets/wing_left.png" alt="wing" class="wing-img-comp left-wing"
+          :class="{ 'is-animated': animated }" decoding="async" />
+      </div>
+    </div>
+
+    <!-- Body Layer -->
+    <div class="bee-body-layer">
+      <img src="/assets/bee assets/bee_body.png" alt="body" class="bee-body-main" decoding="async" />
+
+      <!-- Eyes Layer -->
+      <img v-if="customization.eyes === 'none' || !customization.eyes" src="/assets/bee assets/bee_eyes.png" alt="eyes"
+        class="bee-eyes-main" decoding="async" />
+      <img v-else :src="`/assets/bee assets/eyes/${customization.eyes}.png`" alt="eyes" class="bee-eyes-main"
+        decoding="async" />
+
+      <!-- Accessory Overlays -->
+      <div v-if="customization.top === 'glasses'" class="bee-head-overlay">
+        <img src="/assets/bee assets/eyeglass.png" alt="glasses" class="bee-acc-img" decoding="async" />
       </div>
 
-      <!-- Body Layer -->
-      <div class="bee-body-layer">
-        <img src="/assets/bee assets/bee_body.png" alt="body" class="bee-body-main" />
-        
-        <!-- Eyes Layer -->
-        <img v-if="customization.eyes === 'none' || !customization.eyes" src="/assets/bee assets/bee_eyes.png" alt="eyes" class="bee-eyes-main" />
-        <img v-else :src="`/assets/bee assets/eyes/${customization.eyes}.png`" alt="eyes" class="bee-eyes-main" />
-        
-        <!-- Accessory Overlays -->
-        <div v-if="customization.top === 'glasses'" class="bee-head-overlay">
-          <img src="/assets/bee assets/eyeglass.png" alt="glasses" class="bee-acc-img" />
-        </div>
-
-        <div v-if="customization.top === 'shades'" class="bee-head-overlay">
-           <img src="/assets/bee assets/shades.png" alt="shades" class="bee-acc-img" />
-        </div>
-
-        <div v-if="customization.top === 'hat'" class="bee-head-overlay">
-          <img src="/assets/bee assets/hat.png" alt="hat" class="bee-acc-img" />
-        </div>
-
-        <div v-if="customization.top === 'cowboy'" class="bee-head-overlay">
-          <img src="/assets/bee assets/cowboyhat.png" alt="cowboy hat" class="bee-acc-img" />
-        </div>
-
-        <div v-if="customization.top === 'straw'" class="bee-head-overlay">
-          <img src="/assets/bee assets/strawhat.png" alt="straw hat" class="bee-acc-img" />
-        </div>
-
-        <div v-if="customization.top === 'crown'" class="bee-head-overlay">
-          <img src="/assets/bee assets/crown.png" alt="crown" class="bee-acc-img" />
-        </div>
+      <div v-if="customization.top === 'shades'" class="bee-head-overlay">
+        <img src="/assets/bee assets/shades.png" alt="shades" class="bee-acc-img" decoding="async" />
       </div>
+
+      <div v-if="customization.top === 'hat'" class="bee-head-overlay">
+        <img src="/assets/bee assets/hat.png" alt="hat" class="bee-acc-img" decoding="async" />
+      </div>
+
+      <div v-if="customization.top === 'cowboy'" class="bee-head-overlay">
+        <img src="/assets/bee assets/cowboyhat.png" alt="cowboy hat" class="bee-acc-img" decoding="async" />
+      </div>
+
+      <div v-if="customization.top === 'straw'" class="bee-head-overlay">
+        <img src="/assets/bee assets/strawhat.png" alt="straw hat" class="bee-acc-img" decoding="async" />
+      </div>
+
+      <div v-if="customization.top === 'crown'" class="bee-head-overlay">
+        <img src="/assets/bee assets/crown.png" alt="crown" class="bee-acc-img" decoding="async" />
+      </div>
+    </div>
     </div>
   </div>
 </template>
@@ -96,11 +99,12 @@ const customStyle = computed(() => {
 
 .is-buzzing {
   animation: comp-hover-float 2s infinite ease-in-out;
+  will-change: transform;
 }
 
 @keyframes comp-hover-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+  0%, 100% { transform: translateY(0) translateZ(0); }
+  50% { transform: translateY(-12px) translateZ(0); }
 }
 
 .bee-wings-layer {
@@ -110,26 +114,32 @@ const customStyle = computed(() => {
   top: 35px;
   left: 35px;
   z-index: 1;
+  pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .wing-img-comp {
   width: 150px;
   height: auto;
   opacity: 0.9;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
   max-width: none !important;
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .wing-img-comp.is-animated.left-wing {
-  animation: bee-flap-left 0.1s infinite alternate ease-in-out;
+  animation: bee-flap-left 0.15s infinite alternate ease-in-out;
 }
 .wing-img-comp.is-animated.right-wing {
-  animation: bee-flap-right 0.1s infinite alternate ease-in-out;
+  animation: bee-flap-right 0.15s infinite alternate ease-in-out;
 }
 
 .wing-slot-comp {
   position: absolute;
   z-index: 1;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .wing-slot-comp.left {
@@ -145,13 +155,13 @@ const customStyle = computed(() => {
 }
 
 @keyframes bee-flap-left {
-  from { transform: rotate(15deg); }
-  to { transform: rotate(-20deg); }
+  from { transform: rotate(15deg) translateZ(0); }
+  to { transform: rotate(-20deg) translateZ(0); }
 }
 
 @keyframes bee-flap-right {
-  from { transform: rotate(-15deg); }
-  to { transform: rotate(20deg); }
+  from { transform: rotate(-15deg) translateZ(0); }
+  to { transform: rotate(20deg) translateZ(0); }
 }
 
 .bee-body-layer {
@@ -161,6 +171,7 @@ const customStyle = computed(() => {
   top: 0;
   left: 0;
   z-index: 2;
+  transform: translateZ(0);
 }
 
 .bee-body-main {
@@ -169,9 +180,8 @@ const customStyle = computed(() => {
   height: auto;
   top: 50%;
   left: 35px; /* Centers 150px body in 220px stage */
-  transform: translateY(-50%);
+  transform: translateY(-50%) translateZ(0);
   z-index: 2;
-  filter: drop-shadow(0 8px 12px rgba(0,0,0,0.25));
   max-width: none !important;
 }
 
@@ -181,7 +191,7 @@ const customStyle = computed(() => {
   height: auto;
   top: 50%;
   left: 35px;
-  transform: translateY(-50%);
+  transform: translateY(-50%) translateZ(0);
   z-index: 3;
   pointer-events: none;
   max-width: none !important;
@@ -194,6 +204,7 @@ const customStyle = computed(() => {
   top: 0;
   left: 0;
   z-index: 4;
+  transform: translateZ(0);
 }
 
 .bee-acc-img {
@@ -202,9 +213,8 @@ const customStyle = computed(() => {
   height: auto;
   top: 50%;
   left: 35px;
-  transform: translateY(-50%);
+  transform: translateY(-50%) translateZ(0);
   pointer-events: none;
-  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
   max-width: none !important;
 }
 </style>

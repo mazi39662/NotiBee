@@ -56,9 +56,9 @@
               </div>
             </div>
             <h2>Quiet in the Hive</h2>
-            <p>Share your Buzz Link to start receiving secret messages!</p>
+            <p>Share your BuzzMe to start receiving secret messages!</p>
             <button @click="navigateSetup" class="setup-btn-premium vibrant-btn gold-glow">
-              GET YOUR BUZZ LINK
+              START BUZZME
             </button>
           </div>
 
